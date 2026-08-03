@@ -43,11 +43,11 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="아이디(이메일)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field label="비밀번호" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-base text-destructive">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-3 py-2 text-sm font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+          className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
         >
           {loading ? '로그인 중...' : '로그인'}
         </button>

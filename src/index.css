@@ -70,6 +70,12 @@
   }
 }
 
+html {
+  /* 고령 사용자 비중이 높은 서비스 특성상 기본 글자 크기를 키워 전체 UI(rem 기반 spacing 포함)가
+     비율에 맞게 함께 커지도록 함 */
+  font-size: 125%;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans-kr);

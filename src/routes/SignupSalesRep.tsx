@@ -70,16 +70,16 @@ export default function SignupSalesRep() {
         </Link>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="성함" value={form.name} onChange={update('name')} />
         <Field label="연락처" value={form.phone} onChange={update('phone')} />
         <Field label="이메일(로그인 아이디)" type="email" value={form.email} onChange={update('email')} />
         <Field label="비밀번호" type="password" value={form.password} onChange={update('password')} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-base text-destructive">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-3 py-2 text-sm font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+          className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
         >
           {loading ? '가입 중...' : '가입하기'}
         </button>
