@@ -14,8 +14,8 @@ export default defineConfig({
         name: '하미담',
         short_name: '하미담',
         description: '하미담 영업/주문 관리',
-        theme_color: '#1a1a2e',
-        background_color: '#1a1a2e',
+        theme_color: '#14122a',
+        background_color: '#14122a',
         display: 'standalone',
         start_url: '/',
         icons: [

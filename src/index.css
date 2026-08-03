@@ -1,9 +1,78 @@
 @import "tailwindcss";
 
+@theme {
+  --font-serif-kr: "Noto Serif KR", serif;
+  --font-sans-kr: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+
+  --color-background: var(--hamidam-background);
+  --color-background-alt: var(--hamidam-background-alt);
+  --color-surface: var(--hamidam-surface);
+  --color-foreground: var(--hamidam-foreground);
+  --color-muted-foreground: var(--hamidam-muted-foreground);
+  --color-accent: var(--hamidam-accent);
+  --color-accent-light: var(--hamidam-accent-light);
+  --color-accent-dark: var(--hamidam-accent-dark);
+  --color-accent-foreground: var(--hamidam-accent-foreground);
+  --color-input: var(--hamidam-input);
+  --color-border: var(--hamidam-border);
+  --color-destructive: var(--hamidam-destructive);
+}
+
+/* 라이트 모드: 정제된 웜톤(크림/아이보리) */
 :root {
   color-scheme: light dark;
+
+  --hamidam-background: #f7f1e2;
+  --hamidam-background-alt: #efe3c8;
+  --hamidam-surface: #fffbf2;
+  --hamidam-foreground: #2c2640;
+  --hamidam-muted-foreground: #8a7c5c;
+  --hamidam-accent: #b8863f;
+  --hamidam-accent-light: #d4a75c;
+  --hamidam-accent-dark: #8a6530;
+  --hamidam-accent-foreground: #2c2640;
+  --hamidam-input: #fbf7ec;
+  --hamidam-border: rgba(44, 38, 64, 0.12);
+  --hamidam-destructive: #dc2626;
+}
+
+/* 다크 모드: 야간 프리미엄(미드나잇 네이비 + 골드) */
+:root[data-theme="dark"] {
+  --hamidam-background: #14122a;
+  --hamidam-background-alt: #262143;
+  --hamidam-surface: #1c1a35;
+  --hamidam-foreground: #f6ecd9;
+  --hamidam-muted-foreground: #b7a888;
+  --hamidam-accent: #d1a75c;
+  --hamidam-accent-light: #f6e2ab;
+  --hamidam-accent-dark: #96723a;
+  --hamidam-accent-foreground: #14122a;
+  --hamidam-input: #14122a;
+  --hamidam-border: rgba(246, 236, 217, 0.1);
+  --hamidam-destructive: #f87171;
+}
+
+/* data-theme 속성이 없을 때(초기 페인트 이전 등)의 시스템 설정 폴백 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hamidam-background: #14122a;
+    --hamidam-background-alt: #262143;
+    --hamidam-surface: #1c1a35;
+    --hamidam-foreground: #f6ecd9;
+    --hamidam-muted-foreground: #b7a888;
+    --hamidam-accent: #d1a75c;
+    --hamidam-accent-light: #f6e2ab;
+    --hamidam-accent-dark: #96723a;
+    --hamidam-accent-foreground: #14122a;
+    --hamidam-input: #14122a;
+    --hamidam-border: rgba(246, 236, 217, 0.1);
+    --hamidam-destructive: #f87171;
+  }
 }
 
 body {
   margin: 0;
+  font-family: var(--font-sans-kr);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }

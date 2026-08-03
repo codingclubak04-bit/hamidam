@@ -2,6 +2,9 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Field } from '../components/Field'
+import { AuthLayout } from '../components/AuthLayout'
+import { MoonMark } from '../components/MoonMark'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 interface FormState {
   orgName: string
@@ -89,11 +92,13 @@ export default function SignupPartner() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-sm text-center space-y-3">
-          <h1 className="text-xl font-semibold text-slate-900">등록 신청이 접수되었습니다</h1>
-          <p className="text-sm text-slate-500">하미담 슈퍼관리자 승인 후 로그인하실 수 있습니다.</p>
-          <button onClick={() => navigate('/login')} className="mt-2 text-sm text-slate-600 underline">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4">
+        <ThemeToggle />
+        <div className="max-w-sm space-y-4 text-center">
+          <MoonMark className="mx-auto h-11 w-11" />
+          <h1 className="font-serif-kr text-xl font-bold text-foreground">등록 신청이 접수되었습니다</h1>
+          <p className="text-sm text-muted-foreground">하미담 슈퍼관리자 승인 후 로그인하실 수 있습니다.</p>
+          <button onClick={() => navigate('/login')} className="mt-2 text-sm text-accent underline">
             로그인 화면으로
           </button>
         </div>
@@ -102,35 +107,32 @@ export default function SignupPartner() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-slate-900">파트너 장례회사 등록 신청</h1>
-          <p className="mt-1 text-sm text-slate-500">승인 후 사용 가능합니다</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <Field label="장례회사명" value={form.orgName} onChange={update('orgName')} />
-          <Field label="사업자등록번호" value={form.businessRegNo} onChange={update('businessRegNo')} />
-          <Field label="대표 연락처" value={form.orgContactPhone} onChange={update('orgContactPhone')} />
-          <Field label="담당자 성함" value={form.name} onChange={update('name')} />
-          <Field label="담당자 연락처" value={form.phone} onChange={update('phone')} />
-          <Field label="이메일(로그인 아이디)" type="email" value={form.email} onChange={update('email')} />
-          <Field label="비밀번호" type="password" value={form.password} onChange={update('password')} />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-          >
-            {loading ? '제출 중...' : '등록 신청'}
-          </button>
-        </form>
-        <div className="text-center text-sm">
-          <Link to="/login" className="text-slate-500 hover:text-slate-900 hover:underline">
-            로그인으로 돌아가기
-          </Link>
-        </div>
-      </div>
-    </div>
+    <AuthLayout
+      title="파트너 장례회사 등록 신청"
+      subtitle="승인 후 사용 가능합니다"
+      footer={
+        <Link to="/login" className="text-muted-foreground hover:text-accent hover:underline">
+          로그인으로 돌아가기
+        </Link>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Field label="장례회사명" value={form.orgName} onChange={update('orgName')} />
+        <Field label="사업자등록번호" value={form.businessRegNo} onChange={update('businessRegNo')} />
+        <Field label="대표 연락처" value={form.orgContactPhone} onChange={update('orgContactPhone')} />
+        <Field label="담당자 성함" value={form.name} onChange={update('name')} />
+        <Field label="담당자 연락처" value={form.phone} onChange={update('phone')} />
+        <Field label="이메일(로그인 아이디)" type="email" value={form.email} onChange={update('email')} />
+        <Field label="비밀번호" type="password" value={form.password} onChange={update('password')} />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-3 py-2 text-sm font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+        >
+          {loading ? '제출 중...' : '등록 신청'}
+        </button>
+      </form>
+    </AuthLayout>
   )
 }
