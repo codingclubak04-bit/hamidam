@@ -2,12 +2,23 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import Login from './routes/Login'
+import Setup from './routes/Setup'
 import SignupSalesRep from './routes/SignupSalesRep'
 import ProtectedRoute from './routes/ProtectedRoute'
 import SuperAdminRoute from './routes/SuperAdminRoute'
 import RoleLanding from './routes/RoleLanding'
+import AdminHome from './routes/AdminHome'
+import AdminAccounts from './routes/AdminAccounts'
+import AdminProducts from './routes/AdminProducts'
+import AdminProductForm from './routes/AdminProductForm'
 import AdminPartners from './routes/AdminPartners'
 import AdminSalesReps from './routes/AdminSalesReps'
+import Gallery from './routes/Gallery'
+import Products from './routes/Products'
+import ProductDetail from './routes/ProductDetail'
+import OrderNew from './routes/OrderNew'
+import Orders from './routes/Orders'
+import OrderDetail from './routes/OrderDetail'
 
 function App() {
   return (
@@ -16,10 +27,22 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/setup" element={<Setup />} />
             <Route path="/signup/sales-rep" element={<SignupSalesRep />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<RoleLanding />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/products/:id" element={<ProductDetail />} />
+              <Route path="/orders/new" element={<OrderNew />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/orders/:id" element={<OrderDetail />} />
               <Route element={<SuperAdminRoute />}>
+                <Route path="/admin" element={<AdminHome />} />
+                <Route path="/admin/accounts" element={<AdminAccounts />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/products/new" element={<AdminProductForm />} />
+                <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
                 <Route path="/admin/partners" element={<AdminPartners />} />
                 <Route path="/admin/sales-reps" element={<AdminSalesReps />} />
               </Route>
