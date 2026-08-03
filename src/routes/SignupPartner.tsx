@@ -53,28 +53,26 @@ export default function SignupPartner() {
       return
     }
 
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
-        name: form.orgName,
-        type: 'partner_company',
-        status: 'pending',
-        business_reg_no: form.businessRegNo,
-        contact_phone: form.orgContactPhone,
-      })
-      .select()
-      .single()
+    const orgId = crypto.randomUUID()
+    const { error: orgError } = await supabase.from('organizations').insert({
+      id: orgId,
+      name: form.orgName,
+      type: 'partner_company',
+      status: 'pending',
+      business_reg_no: form.businessRegNo,
+      contact_phone: form.orgContactPhone,
+    })
 
-    if (orgError || !org) {
+    if (orgError) {
       setLoading(false)
-      setError('조직 등록 실패: ' + (orgError?.message ?? '알 수 없는 오류'))
+      setError('조직 등록 실패: ' + orgError.message)
       return
     }
 
     const { error: profileError } = await supabase.from('profiles').insert({
       id: signUpData.user.id,
       role: 'org_admin',
-      organization_id: org.id,
+      organization_id: orgId,
       name: form.name,
       phone: form.phone,
       status: 'pending',
