@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from '../components/MoonMark'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -44,6 +45,27 @@ export default function RoleLanding() {
     <Shell onSignOut={signOut}>
       <h1 className="font-serif-kr text-xl font-bold text-foreground">{profile.name}님, 안녕하세요</h1>
       <p className="mt-2 text-base text-muted-foreground">{roleLabel} 대시보드는 준비 중입니다.</p>
+      {profile.role === 'super_admin' && (
+        <div className="mt-4 space-y-2">
+          <Link
+            to="/admin/partners"
+            className="block rounded-lg border border-border px-4 py-3 text-base text-foreground hover:border-accent hover:text-accent"
+          >
+            파트너사 관리
+          </Link>
+          <Link
+            to="/admin/sales-reps"
+            className="block rounded-lg border border-border px-4 py-3 text-base text-foreground hover:border-accent hover:text-accent"
+          >
+            팀장 관리
+          </Link>
+        </div>
+      )}
+      {profile.role === 'sales_rep' && profile.can_view_all_stats && (
+        <p className="mt-4 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-base text-accent">
+          전체 판매 현황 열람 권한이 있습니다 (통계 화면은 준비 중입니다).
+        </p>
+      )}
     </Shell>
   )
 }

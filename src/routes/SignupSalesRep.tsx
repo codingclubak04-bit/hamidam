@@ -1,7 +1,8 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Field } from '../components/Field'
+import { Select } from '../components/Select'
 import { AuthLayout } from '../components/AuthLayout'
 
 interface FormState {
@@ -9,17 +10,34 @@ interface FormState {
   phone: string
   email: string
   password: string
+  organizationId: string
 }
 
-const initialForm: FormState = { name: '', phone: '', email: '', password: '' }
+interface PartnerOrg {
+  id: string
+  name: string
+}
+
+const initialForm: FormState = { name: '', phone: '', email: '', password: '', organizationId: '' }
 
 export default function SignupSalesRep() {
   const [form, setForm] = useState<FormState>(initialForm)
+  const [orgs, setOrgs] = useState<PartnerOrg[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const update = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement>) =>
+  useEffect(() => {
+    supabase.rpc('list_partner_organizations').then(({ data, error: rpcError }) => {
+      if (rpcError) {
+        console.error('회사 목록 조회 실패:', rpcError.message)
+        return
+      }
+      setOrgs(data ?? [])
+    })
+  }, [])
+
+  const update = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const handleSubmit = async (e: FormEvent) => {
@@ -45,7 +63,7 @@ export default function SignupSalesRep() {
     const { error: profileError } = await supabase.from('profiles').insert({
       id: signUpData.user.id,
       role: 'sales_rep',
-      organization_id: null,
+      organization_id: form.organizationId || null,
       name: form.name,
       phone: form.phone,
       status: 'active',
@@ -62,7 +80,7 @@ export default function SignupSalesRep() {
 
   return (
     <AuthLayout
-      title="개인 판매자(팀장) 가입"
+      title="팀장 가입"
       subtitle="가입 즉시 이용 가능합니다"
       footer={
         <Link to="/login" className="text-muted-foreground hover:text-accent hover:underline">
@@ -75,6 +93,14 @@ export default function SignupSalesRep() {
         <Field label="연락처" value={form.phone} onChange={update('phone')} />
         <Field label="이메일(로그인 아이디)" type="email" value={form.email} onChange={update('email')} />
         <Field label="비밀번호" type="password" value={form.password} onChange={update('password')} />
+        <Select label="소속 회사 (선택)" value={form.organizationId} onChange={update('organizationId')}>
+          <option value="">선택 안 함 — 독립 팀장</option>
+          {orgs.map((org) => (
+            <option key={org.id} value={org.id}>
+              {org.name}
+            </option>
+          ))}
+        </Select>
         {error && <p className="text-base text-destructive">{error}</p>}
         <button
           type="submit"

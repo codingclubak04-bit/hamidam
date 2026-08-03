@@ -10,6 +10,7 @@ export interface Profile {
   name: string
   phone: string | null
   status: ProfileStatus
+  can_view_all_stats: boolean
   created_at: string
 }
 
