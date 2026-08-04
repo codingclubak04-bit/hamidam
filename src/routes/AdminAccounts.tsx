@@ -126,6 +126,12 @@ export default function AdminAccounts() {
 
   const roleLabel = { super_admin: '슈퍼관리자', org_admin: '조직관리자' } as const
 
+  const toggleButtonClass = (row: AdminRow) =>
+    'shrink-0 rounded-lg px-4 py-2 text-base font-semibold disabled:opacity-50 ' +
+    (row.status === 'disabled'
+      ? 'bg-linear-to-r from-accent-light to-accent text-accent-foreground hover:brightness-105'
+      : 'border border-border text-muted-foreground hover:border-destructive hover:text-destructive')
+
   return (
     <AdminShell title="관리자 계정 관리">
       <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
@@ -166,7 +172,7 @@ export default function AdminAccounts() {
 
       <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
         <h2 className="font-serif-kr text-xl font-bold text-foreground">전체 관리자 ({admins.length})</h2>
-        <ul className="mt-4 divide-y divide-border">
+        <ul className="mt-4 divide-y divide-border md:hidden">
           {admins.map((row) => (
             <li key={row.id} className="flex items-center justify-between gap-4 py-3">
               <div>
@@ -186,16 +192,7 @@ export default function AdminAccounts() {
                 </p>
               </div>
               {row.id !== profile?.id && (
-                <button
-                  onClick={() => toggleStatus(row)}
-                  disabled={updatingId === row.id}
-                  className={
-                    'shrink-0 rounded-lg px-4 py-2 text-base font-semibold disabled:opacity-50 ' +
-                    (row.status === 'disabled'
-                      ? 'bg-linear-to-r from-accent-light to-accent text-accent-foreground hover:brightness-105'
-                      : 'border border-border text-muted-foreground hover:border-destructive hover:text-destructive')
-                  }
-                >
+                <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
                   {row.status === 'disabled' ? '활성화' : '비활성화'}
                 </button>
               )}
@@ -203,6 +200,53 @@ export default function AdminAccounts() {
           ))}
           {admins.length === 0 && <li className="py-3 text-base text-muted-foreground">등록된 관리자가 없습니다.</li>}
         </ul>
+
+        <div className="mt-4 hidden overflow-hidden rounded-xl border border-border md:block">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
+                <th className="px-4 py-3 font-medium">이름</th>
+                <th className="px-4 py-3 font-medium">연락처</th>
+                <th className="px-4 py-3 font-medium">소속</th>
+                <th className="px-4 py-3 font-medium">역할</th>
+                <th className="px-4 py-3 font-medium text-right">액션</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {admins.map((row) => (
+                <tr key={row.id}>
+                  <td className="px-4 py-3 text-base font-semibold text-foreground">{row.name}</td>
+                  <td className="px-4 py-3 text-base text-muted-foreground">{row.phone || '연락처 미입력'}</td>
+                  <td className="px-4 py-3 text-base text-muted-foreground">{row.organizations?.name ?? '소속 없음'}</td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-sm font-medium text-accent">
+                      {roleLabel[row.role]}
+                    </span>
+                    {row.status === 'disabled' && (
+                      <span className="ml-2 rounded-full bg-destructive/15 px-2.5 py-0.5 text-sm font-medium text-destructive">
+                        비활성화됨
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {row.id !== profile?.id && (
+                      <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
+                        {row.status === 'disabled' ? '활성화' : '비활성화'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {admins.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-3 text-base text-muted-foreground">
+                    등록된 관리자가 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </AdminShell>
   )

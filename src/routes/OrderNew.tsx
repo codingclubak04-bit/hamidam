@@ -6,7 +6,276 @@ import { MoonMark } from '../components/MoonMark'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { Field } from '../components/Field'
 import { Select } from '../components/Select'
-import type { Product, ProductType } from '../lib/types'
+import { Modal } from '../components/Modal'
+import { EngravePreview, type EngraveElement, type EngravePhoto } from '../components/EngravePreview'
+import { ENGRAVE_FONTS, DEFAULT_ENGRAVE_FONT, type Product, type ProductType } from '../lib/types'
+import {
+  formatBirthEngrave,
+  formatDeathEngrave,
+  formatBirthEngraveDot,
+  formatDeathEngraveDot,
+  religionSymbol,
+} from '../lib/engrave'
+
+interface ElementOverride {
+  xPct: number
+  yPct: number
+  fontPct: number
+}
+
+interface PhotoOverride {
+  xPct: number
+  yPct: number
+  sizePct: number
+}
+
+interface EngraveOverride {
+  fontFamily: string
+  elements: Record<string, ElementOverride>
+  photo?: PhotoOverride
+}
+
+const ENGRAVE_ELEMENT_KEYS = ['name', 'birth', 'death', 'religion'] as const
+const ENGRAVE_ELEMENT_LABELS: Record<string, string> = {
+  name: '이름',
+  birth: '생년월일',
+  death: '사망년월일',
+  religion: '종교기호',
+  photo: '사진',
+}
+
+function defaultEngraveOverride(product: Product, hasPhoto = false): EngraveOverride {
+  // 위패에 사진이 없으면 사진이 차지하던 상단 공간만큼 종교기호/이름만 위로 당겨서
+  // 세로 기준 중앙에 오도록 함(생년월일/사망년월일은 원래 위치 유지, 사진 있을 때
+  // 좌표 대비 상대적 이동량).
+  const noPhotoShift =
+    product.type === 'tablet' && !hasPhoto
+      ? product.engrave_religion_y_pct - product.engrave_photo_y_pct
+      : 0
+  const elements: Record<string, ElementOverride> = {
+    name: {
+      xPct: product.engrave_x_pct,
+      yPct: product.engrave_y_pct - noPhotoShift,
+      fontPct: product.engrave_font_pct,
+    },
+    birth: {
+      xPct: product.engrave_birth_x_pct,
+      yPct: product.engrave_birth_y_pct,
+      fontPct: product.engrave_birth_font_pct,
+    },
+    death: {
+      xPct: product.engrave_death_x_pct,
+      yPct: product.engrave_death_y_pct,
+      fontPct: product.engrave_death_font_pct,
+    },
+    religion: {
+      xPct: product.engrave_religion_x_pct,
+      yPct: product.engrave_religion_y_pct - noPhotoShift,
+      fontPct: product.engrave_religion_font_pct,
+    },
+  }
+  let photo: PhotoOverride | undefined
+  if (product.type === 'tablet') {
+    photo = {
+      xPct: product.engrave_photo_x_pct,
+      yPct: product.engrave_photo_y_pct,
+      sizePct: product.engrave_photo_size_pct,
+    }
+  }
+  return { fontFamily: DEFAULT_ENGRAVE_FONT, elements, photo }
+}
+
+function EngraveEditor({
+  label,
+  product,
+  texts,
+  photoUrl,
+  value,
+  onChange,
+}: {
+  label: string
+  product: Product
+  texts: Record<string, string>
+  photoUrl?: string | null
+  value: EngraveOverride
+  onChange: (v: EngraveOverride) => void
+}) {
+  const textKeys = ENGRAVE_ELEMENT_KEYS
+  const showPhotoTab = product.type === 'tablet' && !!photoUrl
+  const tabKeys: string[] = showPhotoTab ? [...textKeys, 'photo'] : [...textKeys]
+  const [activeKey, setActiveKey] = useState<string>('name')
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const elements: EngraveElement[] = textKeys.map((key) => ({
+    key,
+    text: texts[key] ?? '',
+    xPct: value.elements[key]?.xPct ?? 50,
+    yPct: value.elements[key]?.yPct ?? 50,
+    fontPct: value.elements[key]?.fontPct ?? 6,
+    color: product.engrave_color,
+    fontFamily: value.fontFamily,
+    vertical: true,
+    anchor: key === 'birth' || key === 'death' ? 'top' : 'center',
+  }))
+
+  const photo: EngravePhoto | null =
+    showPhotoTab && photoUrl
+      ? {
+          key: 'photo',
+          url: photoUrl,
+          xPct: value.photo?.xPct ?? 50,
+          yPct: value.photo?.yPct ?? 24,
+          sizePct: value.photo?.sizePct ?? 20,
+        }
+      : null
+
+  const activeFontPct = value.elements[activeKey]?.fontPct ?? 6
+  const activeSizePct = value.photo?.sizePct ?? 20
+
+  const updateActive = (patch: Partial<ElementOverride>) => {
+    onChange({
+      ...value,
+      elements: {
+        ...value.elements,
+        [activeKey]: { ...value.elements[activeKey], ...patch },
+      },
+    })
+  }
+
+  const updatePhoto = (patch: Partial<PhotoOverride>) => {
+    onChange({
+      ...value,
+      photo: {
+        xPct: value.photo?.xPct ?? 50,
+        yPct: value.photo?.yPct ?? 24,
+        sizePct: value.photo?.sizePct ?? 20,
+        ...patch,
+      },
+    })
+  }
+
+  const handlePositionPick = (key: string, x: number, y: number) => {
+    if (key === 'photo') {
+      updatePhoto({ xPct: x, yPct: y })
+      return
+    }
+    onChange({
+      ...value,
+      elements: { ...value.elements, [key]: { ...value.elements[key], xPct: x, yPct: y } },
+    })
+  }
+
+  const renderPreview = (large: boolean) => (
+    <div className={large ? 'mx-auto w-full max-w-[min(85vh,480px)]' : 'mx-auto w-full max-w-[280px]'}>
+      <EngravePreview
+        imageUrl={product.image_url}
+        elements={elements}
+        photo={photo}
+        activeKey={activeKey}
+        onPositionPick={handlePositionPick}
+        onActivate={setActiveKey}
+      />
+      <p className="mt-1.5 text-center text-xs text-muted-foreground">
+        텍스트나 사진을 드래그하거나 이미지를 클릭해 위치를 이동하세요
+      </p>
+    </div>
+  )
+
+  const renderControls = () => (
+    <>
+      {tabKeys.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tabKeys.map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveKey(key)}
+              className={`rounded-full border px-3 py-1 text-xs ${
+                activeKey === key
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border text-muted-foreground'
+              }`}
+            >
+              {ENGRAVE_ELEMENT_LABELS[key]}
+            </button>
+          ))}
+        </div>
+      )}
+      {activeKey === 'photo' ? (
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground">
+            사진 크기 ({activeSizePct.toFixed(1)}%)
+          </label>
+          <input
+            type="range"
+            min={8}
+            max={45}
+            step={0.5}
+            value={activeSizePct}
+            onChange={(e) => updatePhoto({ sizePct: Number(e.target.value) })}
+            className="mt-1.5 w-full"
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground">
+            글자 크기 ({activeFontPct.toFixed(1)}%)
+          </label>
+          <input
+            type="range"
+            min={2}
+            max={20}
+            step={0.5}
+            value={activeFontPct}
+            onChange={(e) => updateActive({ fontPct: Number(e.target.value) })}
+            className="mt-1.5 w-full"
+          />
+        </div>
+      )}
+      <Select
+        label="글꼴"
+        value={value.fontFamily}
+        onChange={(e) => onChange({ ...value, fontFamily: e.target.value })}
+      >
+        {ENGRAVE_FONTS.map((f) => (
+          <option key={f.value} value={f.value} style={{ fontFamily: `"${f.value}", serif` }}>
+            {f.label}
+          </option>
+        ))}
+      </Select>
+      <button
+        type="button"
+        onClick={() => onChange(defaultEngraveOverride(product, showPhotoTab))}
+        className="text-sm text-muted-foreground underline"
+      >
+        기본값으로 되돌리기
+      </button>
+    </>
+  )
+
+  return (
+    <div className="space-y-3 rounded-xl border border-border p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-base font-semibold text-foreground">{label}</p>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="shrink-0 text-sm text-accent underline"
+        >
+          크게 보기
+        </button>
+      </div>
+      {renderPreview(false)}
+      {renderControls()}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`${label} 각인 위치 조정`}>
+        <div className="space-y-4">
+          {renderPreview(true)}
+          {renderControls()}
+        </div>
+      </Modal>
+    </div>
+  )
+}
 
 const religions = ['무교', '천주교', '기독교', '불교', 'SGI', '원불교'] as const
 const dateTypes = ['음한자', '양한자', '음한글', '양한글'] as const
@@ -128,9 +397,11 @@ export default function OrderNew() {
   const [religion, setReligion] = useState<string>('')
   const [deceasedName, setDeceasedName] = useState('')
   const [birthDate, setBirthDate] = useState('')
-  const [birthDateType, setBirthDateType] = useState<string>('양한글')
+  const [birthDateType, setBirthDateType] = useState<string>('양한자')
   const [deathDate, setDeathDate] = useState('')
-  const [deathDateType, setDeathDateType] = useState<string>('양한글')
+  const [deathDateType, setDeathDateType] = useState<string>('양한자')
+  const [urnDateStyle, setUrnDateStyle] = useState<'hanja' | 'dot'>('hanja')
+  const [tabletDateStyle, setTabletDateStyle] = useState<'hanja' | 'dot'>('hanja')
 
   const [funeralHome, setFuneralHome] = useState('')
   const [crematorium, setCrematorium] = useState('')
@@ -144,15 +415,29 @@ export default function OrderNew() {
   const [hasSpecialNotes, setHasSpecialNotes] = useState(false)
   const [specialNotes, setSpecialNotes] = useState('')
 
+  const [tabletPhotoFile, setTabletPhotoFile] = useState<File | null>(null)
+
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  const tabletPhotoPreviewUrl = useMemo(
+    () => (tabletPhotoFile ? URL.createObjectURL(tabletPhotoFile) : null),
+    [tabletPhotoFile],
+  )
+  useEffect(() => {
+    return () => {
+      if (tabletPhotoPreviewUrl) URL.revokeObjectURL(tabletPhotoPreviewUrl)
+    }
+  }, [tabletPhotoPreviewUrl])
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase
         .from('products')
-        .select('id, category, type, name, model_code, spec, price, image_url, is_active')
+        .select(
+          'id, category, type, name, model_code, spec, price, image_url, is_active, engrave_x_pct, engrave_y_pct, engrave_font_pct, engrave_color, engrave_birth_x_pct, engrave_birth_y_pct, engrave_birth_font_pct, engrave_death_x_pct, engrave_death_y_pct, engrave_death_font_pct, engrave_religion_x_pct, engrave_religion_y_pct, engrave_religion_font_pct, engrave_photo_x_pct, engrave_photo_y_pct, engrave_photo_size_pct',
+        )
         .eq('is_active', true)
         .order('category')
         .order('name')
@@ -162,19 +447,91 @@ export default function OrderNew() {
   }, [])
 
   const urnProduct = products.find((p) => p.id === urnId) ?? null
+  const tabletProduct = products.find((p) => p.id === tabletId) ?? null
+
+  const [urnEngrave, setUrnEngrave] = useState<EngraveOverride | null>(null)
+  const [tabletEngrave, setTabletEngrave] = useState<EngraveOverride | null>(null)
+
+  const engraveTexts = useMemo(
+    () => ({
+      name: deceasedName,
+      birth: formatBirthEngrave(birthDate, birthDateType),
+      death: formatDeathEngrave(deathDate, deathDateType, religion),
+      religion: religionSymbol(religion),
+    }),
+    [deceasedName, birthDate, birthDateType, deathDate, deathDateType, religion],
+  )
+
+  const urnEngraveTexts = useMemo(
+    () =>
+      urnDateStyle === 'dot'
+        ? {
+            name: deceasedName,
+            birth: formatBirthEngraveDot(birthDate),
+            death: formatDeathEngraveDot(deathDate, religion),
+            religion: religionSymbol(religion),
+          }
+        : engraveTexts,
+    [urnDateStyle, engraveTexts, deceasedName, birthDate, deathDate, religion],
+  )
+
+  const tabletEngraveTexts = useMemo(
+    () =>
+      tabletDateStyle === 'dot'
+        ? {
+            name: deceasedName,
+            birth: formatBirthEngraveDot(birthDate),
+            death: formatDeathEngraveDot(deathDate, religion),
+            religion: religionSymbol(religion),
+          }
+        : engraveTexts,
+    [tabletDateStyle, engraveTexts, deceasedName, birthDate, deathDate, religion],
+  )
+
+  const hasTabletPhoto = !!tabletPhotoPreviewUrl
+
+  useEffect(() => {
+    setUrnEngrave(urnProduct ? defaultEngraveOverride(urnProduct) : null)
+  }, [urnProduct?.id])
+
+  useEffect(() => {
+    setTabletEngrave(tabletProduct ? defaultEngraveOverride(tabletProduct, hasTabletPhoto) : null)
+  }, [tabletProduct?.id, hasTabletPhoto])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!profile) return
-    if (!urnId) {
-      setError('유골함을 선택해주세요.')
+    if (!urnId && !tabletId) {
+      setError('유골함 또는 위패 중 하나 이상을 선택해주세요.')
       return
     }
     setSubmitting(true)
     setError(null)
 
-    const tabletProduct = products.find((p) => p.id === tabletId) ?? null
     const finalCrematorium = crematorium === CUSTOM_CREMATORIUM ? crematoriumCustom : crematorium
+
+    let tabletPhotoUrl: string | null = null
+    if (tabletPhotoFile) {
+      const ext = tabletPhotoFile.name.split('.').pop() ?? 'jpg'
+      const path = `${profile.id}/${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('order-photos')
+        .upload(path, tabletPhotoFile, { contentType: tabletPhotoFile.type })
+      if (uploadError) {
+        setSubmitting(false)
+        setError('사진 업로드 실패: ' + uploadError.message)
+        return
+      }
+      const { data: signedData, error: signError } = await supabase.storage
+        .from('order-photos')
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
+      if (signError || !signedData) {
+        setSubmitting(false)
+        setError('사진 URL 생성 실패: ' + (signError?.message ?? ''))
+        return
+      }
+      tabletPhotoUrl = signedData.signedUrl
+    }
 
     const { error: insertError } = await supabase.from('orders').insert({
       sales_rep_id: profile.id,
@@ -183,6 +540,38 @@ export default function OrderNew() {
       urn_price: urnProduct?.price ?? null,
       tablet_product_id: tabletId,
       tablet_price: tabletProduct?.price ?? null,
+      urn_engrave_x_pct: urnEngrave?.elements.name?.xPct ?? null,
+      urn_engrave_y_pct: urnEngrave?.elements.name?.yPct ?? null,
+      urn_engrave_font_pct: urnEngrave?.elements.name?.fontPct ?? null,
+      urn_engrave_font_family: urnEngrave?.fontFamily ?? null,
+      urn_birth_x_pct: urnEngrave?.elements.birth?.xPct ?? null,
+      urn_birth_y_pct: urnEngrave?.elements.birth?.yPct ?? null,
+      urn_birth_font_pct: urnEngrave?.elements.birth?.fontPct ?? null,
+      urn_death_x_pct: urnEngrave?.elements.death?.xPct ?? null,
+      urn_death_y_pct: urnEngrave?.elements.death?.yPct ?? null,
+      urn_death_font_pct: urnEngrave?.elements.death?.fontPct ?? null,
+      urn_religion_x_pct: urnEngrave?.elements.religion?.xPct ?? null,
+      urn_religion_y_pct: urnEngrave?.elements.religion?.yPct ?? null,
+      urn_religion_font_pct: urnEngrave?.elements.religion?.fontPct ?? null,
+      urn_date_style: urnDateStyle,
+      tablet_engrave_x_pct: tabletEngrave?.elements.name?.xPct ?? null,
+      tablet_engrave_y_pct: tabletEngrave?.elements.name?.yPct ?? null,
+      tablet_engrave_font_pct: tabletEngrave?.elements.name?.fontPct ?? null,
+      tablet_engrave_font_family: tabletEngrave?.fontFamily ?? null,
+      tablet_birth_x_pct: tabletEngrave?.elements.birth?.xPct ?? null,
+      tablet_birth_y_pct: tabletEngrave?.elements.birth?.yPct ?? null,
+      tablet_birth_font_pct: tabletEngrave?.elements.birth?.fontPct ?? null,
+      tablet_death_x_pct: tabletEngrave?.elements.death?.xPct ?? null,
+      tablet_death_y_pct: tabletEngrave?.elements.death?.yPct ?? null,
+      tablet_death_font_pct: tabletEngrave?.elements.death?.fontPct ?? null,
+      tablet_religion_x_pct: tabletEngrave?.elements.religion?.xPct ?? null,
+      tablet_religion_y_pct: tabletEngrave?.elements.religion?.yPct ?? null,
+      tablet_religion_font_pct: tabletEngrave?.elements.religion?.fontPct ?? null,
+      tablet_date_style: tabletDateStyle,
+      tablet_photo_url: tabletPhotoUrl,
+      tablet_photo_x_pct: tabletPhotoUrl ? tabletEngrave?.photo?.xPct ?? null : null,
+      tablet_photo_y_pct: tabletPhotoUrl ? tabletEngrave?.photo?.yPct ?? null : null,
+      tablet_photo_size_pct: tabletPhotoUrl ? tabletEngrave?.photo?.sizePct ?? null : null,
       religion: religion || null,
       deceased_name: deceasedName || null,
       birth_date: birthDate || null,
@@ -233,7 +622,7 @@ export default function OrderNew() {
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
       <ThemeToggle />
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl lg:max-w-4xl xl:max-w-5xl">
         <div className="mb-6 flex items-center gap-3">
           <MoonMark className="h-9 w-9" />
           <div>
@@ -244,21 +633,28 @@ export default function OrderNew() {
           </div>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-8 rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur"
-        >
+        <form onSubmit={handleSubmit} className="lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-6">
+        <div className="space-y-8 rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
           <section className="space-y-4">
             <h2 className="font-serif-kr text-lg font-bold text-foreground">상품 선택</h2>
             <ProductPicker
-              label="유골함 선택"
+              label="유골함 선택 (위패와 최소 1개 선택)"
               type="urn"
               products={products}
               selectedId={urnId}
               onSelect={(p) => setUrnId(p?.id ?? null)}
             />
+            {urnId && (
+              <button
+                type="button"
+                onClick={() => setUrnId(null)}
+                className="text-sm text-muted-foreground underline"
+              >
+                유골함 선택 취소
+              </button>
+            )}
             <ProductPicker
-              label="위패 선택 (선택 사항)"
+              label="위패 선택 (유골함과 최소 1개 선택)"
               type="tablet"
               products={products}
               selectedId={tabletId}
@@ -267,11 +663,36 @@ export default function OrderNew() {
             {tabletId && (
               <button
                 type="button"
-                onClick={() => setTabletId(null)}
+                onClick={() => {
+                  setTabletId(null)
+                  setTabletPhotoFile(null)
+                }}
                 className="text-sm text-muted-foreground underline"
               >
                 위패 선택 취소
               </button>
+            )}
+            {tabletProduct && (
+              <div>
+                <label className="block text-base font-medium text-muted-foreground">
+                  고인 사진 (선택, 위패 각인 미리보기용)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setTabletPhotoFile(e.target.files?.[0] ?? null)}
+                  className="mt-1.5 w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-accent-foreground"
+                />
+                {tabletPhotoFile && (
+                  <button
+                    type="button"
+                    onClick={() => setTabletPhotoFile(null)}
+                    className="mt-1.5 text-sm text-muted-foreground underline"
+                  >
+                    사진 제거
+                  </button>
+                )}
+              </div>
             )}
           </section>
 
@@ -286,6 +707,102 @@ export default function OrderNew() {
               ))}
             </Select>
             <Field label="고인명" value={deceasedName} onChange={(e) => setDeceasedName(e.target.value)} />
+
+            {urnProduct && (
+              <div>
+                <label className="block text-base font-medium text-muted-foreground">
+                  유골함 표기 스타일
+                </label>
+                <div className="mt-1.5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUrnDateStyle('hanja')}
+                    className={`flex-1 rounded-lg border px-4 py-3 text-base ${
+                      urnDateStyle === 'hanja'
+                        ? 'border-accent bg-accent/10 text-accent'
+                        : 'border-border text-muted-foreground'
+                    }`}
+                  >
+                    한자 병기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUrnDateStyle('dot')}
+                    className={`flex-1 rounded-lg border px-4 py-3 text-base ${
+                      urnDateStyle === 'dot'
+                        ? 'border-accent bg-accent/10 text-accent'
+                        : 'border-border text-muted-foreground'
+                    }`}
+                  >
+                    점 표기 간단
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tabletProduct && (
+              <div>
+                <label className="block text-base font-medium text-muted-foreground">
+                  위패 표기 스타일
+                </label>
+                <div className="mt-1.5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTabletDateStyle('hanja')}
+                    className={`flex-1 rounded-lg border px-4 py-3 text-base ${
+                      tabletDateStyle === 'hanja'
+                        ? 'border-accent bg-accent/10 text-accent'
+                        : 'border-border text-muted-foreground'
+                    }`}
+                  >
+                    한자 병기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTabletDateStyle('dot')}
+                    className={`flex-1 rounded-lg border px-4 py-3 text-base ${
+                      tabletDateStyle === 'dot'
+                        ? 'border-accent bg-accent/10 text-accent'
+                        : 'border-border text-muted-foreground'
+                    }`}
+                  >
+                    점 표기 간단
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {(urnProduct || tabletProduct) && (
+              <div className="space-y-3 lg:hidden">
+                <p className="text-base font-medium text-muted-foreground">
+                  각인 미리보기 — 위치·크기·글꼴을 조정할 수 있습니다
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {urnProduct && urnEngrave && (
+                    <EngraveEditor
+                      label="유골함"
+                      product={urnProduct}
+                      texts={urnEngraveTexts}
+                      value={urnEngrave}
+                      onChange={setUrnEngrave}
+                    />
+                  )}
+                  {tabletProduct && tabletEngrave && (
+                    <EngraveEditor
+                      label="위패"
+                      product={tabletProduct}
+                      texts={tabletEngraveTexts}
+                      photoUrl={tabletPhotoPreviewUrl}
+                      value={tabletEngrave}
+                      onChange={setTabletEngrave}
+                    />
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  실제 각인 위치는 상품 제작 시 미세하게 달라질 수 있습니다.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-base font-medium text-muted-foreground">생년월일</label>
@@ -429,7 +946,40 @@ export default function OrderNew() {
           >
             {submitting ? '저장 중...' : '주문서보내기'}
           </button>
-        </form>
+        </div>
+
+        {(urnProduct || tabletProduct) && (
+          <div className="hidden space-y-3 lg:sticky lg:top-10 lg:block">
+            <p className="text-base font-medium text-muted-foreground">
+              각인 미리보기 — 위치·크기·글꼴을 조정할 수 있습니다
+            </p>
+            <div className="space-y-4">
+              {urnProduct && urnEngrave && (
+                <EngraveEditor
+                  label="유골함"
+                  product={urnProduct}
+                  texts={urnEngraveTexts}
+                  value={urnEngrave}
+                  onChange={setUrnEngrave}
+                />
+              )}
+              {tabletProduct && tabletEngrave && (
+                <EngraveEditor
+                  label="위패"
+                  product={tabletProduct}
+                  texts={tabletEngraveTexts}
+                  photoUrl={tabletPhotoPreviewUrl}
+                  value={tabletEngrave}
+                  onChange={setTabletEngrave}
+                />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              실제 각인 위치는 상품 제작 시 미세하게 달라질 수 있습니다.
+            </p>
+          </div>
+        )}
+      </form>
       </div>
     </div>
   )

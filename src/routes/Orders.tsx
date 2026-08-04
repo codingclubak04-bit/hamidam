@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { MoonMark } from '../components/MoonMark'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -32,6 +32,7 @@ interface OrderRow {
 }
 
 export default function Orders() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +78,7 @@ export default function Orders() {
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
       <ThemeToggle />
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl md:max-w-4xl lg:max-w-5xl">
         <div className="mb-6 flex items-center gap-3">
           <MoonMark className="h-9 w-9" />
           <div>
@@ -113,12 +114,12 @@ export default function Orders() {
         {error && <p className="text-base text-destructive">{error}</p>}
 
         {!loading && !error && filtered.length === 0 && (
-          <p className="rounded-2xl border border-border bg-surface/80 p-7 text-center text-base text-muted-foreground">
+          <p className="rounded-2xl border border-border bg-surface/80 p-7 text-center text-base text-muted-foreground md:hidden">
             조회할 주문이 없습니다.
           </p>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-3 md:hidden">
           {filtered.map((o) => (
             <Link
               key={o.id}
@@ -154,6 +155,58 @@ export default function Orders() {
               </div>
             </Link>
           ))}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/80 backdrop-blur md:block">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
+                <th className="px-5 py-3 font-medium">고인명</th>
+                <th className="px-5 py-3 font-medium">주문자 / 상품</th>
+                <th className="px-5 py-3 font-medium">소속 · 담당자</th>
+                <th className="px-5 py-3 font-medium">상태</th>
+                <th className="px-5 py-3 font-medium">접수일</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((o) => (
+                <tr
+                  key={o.id}
+                  onClick={() => navigate(`/orders/${o.id}`)}
+                  className="cursor-pointer transition hover:bg-input"
+                >
+                  <td className="px-5 py-4 text-base font-semibold text-foreground">
+                    {o.deceased_name ?? '고인명 미입력'}
+                  </td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">
+                    {o.customer_name} · {o.urn_product?.name ?? '유골함 미선택'}
+                    {o.tablet_product && ` · ${o.tablet_product.name}`}
+                  </td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">
+                    {o.organization?.name && `${o.organization.name} · `}
+                    {o.sales_rep?.name ?? '-'}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-sm font-medium ${statusBadgeClass[o.status]}`}
+                    >
+                      {statusLabel[o.status]}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">
+                    {new Date(o.created_at).toLocaleDateString('ko-KR')}
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-center text-base text-muted-foreground">
+                    조회할 주문이 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -46,6 +46,12 @@ export default function AdminProducts() {
     return Array.from(map.entries())
   }, [products])
 
+  const toggleButtonClass = (p: Product) =>
+    'shrink-0 rounded-lg px-4 py-2 text-base font-semibold disabled:opacity-50 ' +
+    (p.is_active
+      ? 'border border-border text-muted-foreground hover:border-destructive hover:text-destructive'
+      : 'bg-linear-to-r from-accent-light to-accent text-accent-foreground hover:brightness-105')
+
   const toggleActive = async (product: Product) => {
     setUpdatingId(product.id)
     const { error: updateError } = await supabase
@@ -83,7 +89,7 @@ export default function AdminProducts() {
             <h2 className="font-serif-kr mb-3 text-lg font-bold text-foreground">
               {category} <span className="text-base font-normal text-muted-foreground">({items.length})</span>
             </h2>
-            <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface/80 backdrop-blur">
+            <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface/80 backdrop-blur md:hidden">
               {items.map((p) => (
                 <div key={p.id} className="flex items-center gap-4 px-5 py-4">
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-input">
@@ -114,20 +120,67 @@ export default function AdminProducts() {
                   >
                     수정
                   </Link>
-                  <button
-                    onClick={() => toggleActive(p)}
-                    disabled={updatingId === p.id}
-                    className={
-                      'shrink-0 rounded-lg px-4 py-2 text-base font-semibold disabled:opacity-50 ' +
-                      (p.is_active
-                        ? 'border border-border text-muted-foreground hover:border-destructive hover:text-destructive'
-                        : 'bg-linear-to-r from-accent-light to-accent text-accent-foreground hover:brightness-105')
-                    }
-                  >
+                  <button onClick={() => toggleActive(p)} disabled={updatingId === p.id} className={toggleButtonClass(p)}>
                     {p.is_active ? '비활성화' : '활성화'}
                   </button>
                 </div>
               ))}
+            </div>
+
+            <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/80 backdrop-blur md:block">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">사진</th>
+                    <th className="px-4 py-3 font-medium">상품명</th>
+                    <th className="px-4 py-3 font-medium">모델</th>
+                    <th className="px-4 py-3 font-medium">유형</th>
+                    <th className="px-4 py-3 font-medium">가격</th>
+                    <th className="px-4 py-3 font-medium text-right">액션</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {items.map((p) => (
+                    <tr key={p.id}>
+                      <td className="px-4 py-3">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-input">
+                          {p.image_url ? (
+                            <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                              없음
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-base font-semibold text-foreground">
+                        {p.name}
+                        {!p.is_active && (
+                          <span className="ml-2 rounded-full bg-destructive/15 px-2.5 py-0.5 text-sm font-medium text-destructive">
+                            비활성화됨
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-base text-muted-foreground">{p.model_code}</td>
+                      <td className="px-4 py-3 text-base text-muted-foreground">{typeLabel[p.type]}</td>
+                      <td className="px-4 py-3 text-base text-muted-foreground">{p.price.toLocaleString()}원</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <Link
+                            to={`/admin/products/${p.id}/edit`}
+                            className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                          >
+                            수정
+                          </Link>
+                          <button onClick={() => toggleActive(p)} disabled={updatingId === p.id} className={toggleButtonClass(p)}>
+                            {p.is_active ? '비활성화' : '활성화'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         ))}

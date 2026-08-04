@@ -70,6 +70,18 @@
   }
 }
 
+/* 다크 배경 위에서 네이티브 날짜/시간 인풋의 캘린더 아이콘이 어두워 안 보이는 문제 보정 */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) input[type="date"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme="light"]) input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+
 html {
   /* 고령 사용자 비중이 높은 서비스 특성상 기본 글자 크기를 키워 전체 UI(rem 기반 spacing 포함)가
      비율에 맞게 함께 커지도록 함 */
@@ -81,6 +93,8 @@ body {
   font-family: var(--font-sans-kr);
   background-color: var(--color-background);
   color: var(--color-foreground);
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 @keyframes hamidam-fade {

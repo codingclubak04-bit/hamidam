@@ -29,9 +29,14 @@ export default function Login() {
       title="하미담"
       subtitle="영업/주문 관리"
       footer={
-        <Link to="/signup/sales-rep" className="text-muted-foreground hover:text-accent hover:underline">
-          가입하기(팀장)
-        </Link>
+        <div className="space-y-2">
+          <Link to="/signup/sales-rep" className="block text-muted-foreground hover:text-accent hover:underline">
+            가입하기(팀장)
+          </Link>
+          <Link to="/signup/partner" className="block text-muted-foreground hover:text-accent hover:underline">
+            가입하기(파트너 장례회사)
+          </Link>
+        </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,9 +1,12 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { AdminShell } from '../components/AdminShell'
 import { Field } from '../components/Field'
 import { Select } from '../components/Select'
+import { Modal } from '../components/Modal'
+import { EngravePreview, type EngraveElement, type EngravePhoto } from '../components/EngravePreview'
+import { formatBirthEngrave, formatDeathEngrave, religionSymbol } from '../lib/engrave'
 import type { ProductType } from '../lib/types'
 
 interface FormState {
@@ -13,7 +16,29 @@ interface FormState {
   model_code: string
   spec: string
   price: string
+  engrave_x_pct: number
+  engrave_y_pct: number
+  engrave_font_pct: number
+  engrave_color: string
+  engrave_birth_x_pct: number
+  engrave_birth_y_pct: number
+  engrave_birth_font_pct: number
+  engrave_death_x_pct: number
+  engrave_death_y_pct: number
+  engrave_death_font_pct: number
+  engrave_religion_x_pct: number
+  engrave_religion_y_pct: number
+  engrave_religion_font_pct: number
+  engrave_photo_x_pct: number
+  engrave_photo_y_pct: number
+  engrave_photo_size_pct: number
 }
+
+const SILHOUETTE_PHOTO_URL =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 130"><rect width="100" height="130" fill="#d9d9d9"/><circle cx="50" cy="45" r="24" fill="#a8a8a8"/><path d="M12 122c4-30 26-46 38-46s34 16 38 46z" fill="#a8a8a8"/></svg>`,
+  )
 
 const initialForm: FormState = {
   category: '',
@@ -22,7 +47,44 @@ const initialForm: FormState = {
   model_code: '',
   spec: '',
   price: '',
+  engrave_x_pct: 50,
+  engrave_y_pct: 70,
+  engrave_font_pct: 6,
+  engrave_color: '#1a1a1a',
+  engrave_birth_x_pct: 25,
+  engrave_birth_y_pct: 55,
+  engrave_birth_font_pct: 3,
+  engrave_death_x_pct: 75,
+  engrave_death_y_pct: 55,
+  engrave_death_font_pct: 3,
+  engrave_religion_x_pct: 50,
+  engrave_religion_y_pct: 20,
+  engrave_religion_font_pct: 8,
+  engrave_photo_x_pct: 50,
+  engrave_photo_y_pct: 24,
+  engrave_photo_size_pct: 20,
 }
+
+const TABLET_ELEMENT_KEYS = ['name', 'birth', 'death', 'religion'] as const
+type TabletElementKey = (typeof TABLET_ELEMENT_KEYS)[number]
+type TabletTabKey = TabletElementKey | 'photo'
+const TABLET_TAB_KEYS: readonly TabletTabKey[] = [...TABLET_ELEMENT_KEYS, 'photo']
+const TABLET_ELEMENT_LABELS: Record<TabletTabKey, string> = {
+  name: '이름',
+  birth: '생년월일',
+  death: '사망년월일',
+  religion: '종교기호',
+  photo: '사진',
+}
+
+const ELEMENT_FIELD_KEYS: Record<TabletElementKey, { x: keyof FormState; y: keyof FormState; font: keyof FormState }> = {
+  name: { x: 'engrave_x_pct', y: 'engrave_y_pct', font: 'engrave_font_pct' },
+  birth: { x: 'engrave_birth_x_pct', y: 'engrave_birth_y_pct', font: 'engrave_birth_font_pct' },
+  death: { x: 'engrave_death_x_pct', y: 'engrave_death_y_pct', font: 'engrave_death_font_pct' },
+  religion: { x: 'engrave_religion_x_pct', y: 'engrave_religion_y_pct', font: 'engrave_religion_font_pct' },
+}
+
+const SAMPLE_RELIGIONS = ['선택 안 함', '기독교', '천주교', '불교', '원불교'] as const
 
 export default function AdminProductForm() {
   const { id } = useParams<{ id: string }>()
@@ -35,13 +97,174 @@ export default function AdminProductForm() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sampleName, setSampleName] = useState('홍길동')
+  const [sampleReligion, setSampleReligion] = useState<string>('기독교')
+  const [activeKey, setActiveKey] = useState<TabletTabKey>('name')
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const filePreviewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl)
+    }
+  }, [filePreviewUrl])
+
+  const previewImageUrl = filePreviewUrl ?? existingImageUrl
+
+  const previewTexts: Record<TabletElementKey, string> = useMemo(() => {
+    const religion = sampleReligion === '선택 안 함' ? '' : sampleReligion
+    return {
+      name: sampleName,
+      birth: formatBirthEngrave('1950-01-01', '양한자'),
+      death: formatDeathEngrave('2026-01-01', '양한자', religion),
+      religion: religionSymbol(religion),
+    }
+  }, [sampleName, sampleReligion])
+
+  const hasEngraveTabs = form.type !== 'other'
+
+  const previewElements: EngraveElement[] = useMemo(() => {
+    const keys: readonly TabletElementKey[] = hasEngraveTabs ? TABLET_ELEMENT_KEYS : ['name']
+    return keys.map((key) => {
+      const fields = ELEMENT_FIELD_KEYS[key]
+      return {
+        key,
+        text: previewTexts[key],
+        xPct: form[fields.x] as number,
+        yPct: form[fields.y] as number,
+        fontPct: form[fields.font] as number,
+        color: form.engrave_color,
+        vertical: hasEngraveTabs,
+        anchor: key === 'birth' || key === 'death' ? 'top' : 'center',
+      }
+    })
+  }, [form, previewTexts, hasEngraveTabs])
+
+  const effectiveKey: TabletTabKey =
+    hasEngraveTabs && (form.type === 'tablet' || activeKey !== 'photo') ? activeKey : 'name'
+  const isPhotoActive = effectiveKey === 'photo'
+  const activeFontPct = isPhotoActive
+    ? 0
+    : (form[ELEMENT_FIELD_KEYS[effectiveKey as TabletElementKey].font] as number)
+
+  const previewPhoto: EngravePhoto | null =
+    form.type === 'tablet'
+      ? {
+          key: 'photo',
+          url: SILHOUETTE_PHOTO_URL,
+          xPct: form.engrave_photo_x_pct,
+          yPct: form.engrave_photo_y_pct,
+          sizePct: form.engrave_photo_size_pct,
+        }
+      : null
+
+  const renderEngraveControls = (large: boolean) => (
+    <>
+      <div className={large ? 'mx-auto w-full max-w-[min(85vh,520px)]' : 'max-w-xs'}>
+        <EngravePreview
+          imageUrl={previewImageUrl}
+          elements={previewElements}
+          photo={previewPhoto}
+          activeKey={effectiveKey}
+          onPositionPick={(key, x, y) => {
+            if (key === 'photo') {
+              setForm((f) => ({ ...f, engrave_photo_x_pct: x, engrave_photo_y_pct: y }))
+              return
+            }
+            const fields = ELEMENT_FIELD_KEYS[key as TabletElementKey]
+            setForm((f) => ({ ...f, [fields.x]: x, [fields.y]: y }))
+          }}
+          onActivate={(key) => setActiveKey(key as TabletTabKey)}
+        />
+      </div>
+      {hasEngraveTabs && (
+        <div className="flex flex-wrap gap-1.5">
+          {(form.type === 'tablet' ? TABLET_TAB_KEYS : TABLET_ELEMENT_KEYS).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveKey(key)}
+              className={`rounded-full border px-3 py-1 text-xs ${
+                activeKey === key
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border text-muted-foreground'
+              }`}
+            >
+              {TABLET_ELEMENT_LABELS[key]}
+            </button>
+          ))}
+        </div>
+      )}
+      {form.type === 'tablet' && activeKey === 'photo' && (
+        <p className="text-xs text-muted-foreground">
+          실루엣 아이콘은 위치 조정용 샘플입니다. 실제 각인 시에는 주문서에서 업로드한 고인 사진이
+          여기에 표시됩니다.
+        </p>
+      )}
+      <Field label="미리보기용 이름" value={sampleName} onChange={(e) => setSampleName(e.target.value)} />
+      {hasEngraveTabs && (
+        <Select label="미리보기용 종교" value={sampleReligion} onChange={(e) => setSampleReligion(e.target.value)}>
+          {SAMPLE_RELIGIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </Select>
+      )}
+      {isPhotoActive ? (
+        <div>
+          <label className="block text-base font-medium text-muted-foreground">
+            사진 크기 ({form.engrave_photo_size_pct}%)
+          </label>
+          <input
+            type="range"
+            min={8}
+            max={45}
+            step={0.5}
+            value={form.engrave_photo_size_pct}
+            onChange={(e) => setForm((f) => ({ ...f, engrave_photo_size_pct: Number(e.target.value) }))}
+            className="mt-1.5 w-full"
+          />
+        </div>
+      ) : (
+        <div>
+          <label className="block text-base font-medium text-muted-foreground">
+            글자 크기 ({activeFontPct}%)
+          </label>
+          <input
+            type="range"
+            min={2}
+            max={20}
+            step={0.5}
+            value={activeFontPct}
+            onChange={(e) => {
+              const fields = ELEMENT_FIELD_KEYS[effectiveKey as TabletElementKey]
+              setForm((f) => ({ ...f, [fields.font]: Number(e.target.value) }))
+            }}
+            className="mt-1.5 w-full"
+          />
+        </div>
+      )}
+      <div className="flex items-center gap-3">
+        <label className="text-base font-medium text-muted-foreground">글자 색상</label>
+        <input
+          type="color"
+          value={form.engrave_color}
+          onChange={(e) => setForm((f) => ({ ...f, engrave_color: e.target.value }))}
+          className="h-10 w-16 rounded border border-border bg-input"
+        />
+      </div>
+    </>
+  )
 
   useEffect(() => {
     if (!isEdit) return
     const load = async () => {
       const { data, error: loadError } = await supabase
         .from('products')
-        .select('category, type, name, model_code, spec, price, image_url')
+        .select(
+          'category, type, name, model_code, spec, price, image_url, engrave_x_pct, engrave_y_pct, engrave_font_pct, engrave_color, engrave_birth_x_pct, engrave_birth_y_pct, engrave_birth_font_pct, engrave_death_x_pct, engrave_death_y_pct, engrave_death_font_pct, engrave_religion_x_pct, engrave_religion_y_pct, engrave_religion_font_pct, engrave_photo_x_pct, engrave_photo_y_pct, engrave_photo_size_pct',
+        )
         .eq('id', id)
         .single()
 
@@ -58,6 +281,22 @@ export default function AdminProductForm() {
         model_code: data.model_code,
         spec: data.spec ?? '',
         price: String(data.price),
+        engrave_x_pct: data.engrave_x_pct,
+        engrave_y_pct: data.engrave_y_pct,
+        engrave_font_pct: data.engrave_font_pct,
+        engrave_color: data.engrave_color,
+        engrave_birth_x_pct: data.engrave_birth_x_pct,
+        engrave_birth_y_pct: data.engrave_birth_y_pct,
+        engrave_birth_font_pct: data.engrave_birth_font_pct,
+        engrave_death_x_pct: data.engrave_death_x_pct,
+        engrave_death_y_pct: data.engrave_death_y_pct,
+        engrave_death_font_pct: data.engrave_death_font_pct,
+        engrave_religion_x_pct: data.engrave_religion_x_pct,
+        engrave_religion_y_pct: data.engrave_religion_y_pct,
+        engrave_religion_font_pct: data.engrave_religion_font_pct,
+        engrave_photo_x_pct: data.engrave_photo_x_pct,
+        engrave_photo_y_pct: data.engrave_photo_y_pct,
+        engrave_photo_size_pct: data.engrave_photo_size_pct,
       })
       setExistingImageUrl(data.image_url)
       setLoading(false)
@@ -104,6 +343,22 @@ export default function AdminProductForm() {
       spec: form.spec || null,
       price,
       image_url: imageUrl,
+      engrave_x_pct: form.engrave_x_pct,
+      engrave_y_pct: form.engrave_y_pct,
+      engrave_font_pct: form.engrave_font_pct,
+      engrave_color: form.engrave_color,
+      engrave_birth_x_pct: form.engrave_birth_x_pct,
+      engrave_birth_y_pct: form.engrave_birth_y_pct,
+      engrave_birth_font_pct: form.engrave_birth_font_pct,
+      engrave_death_x_pct: form.engrave_death_x_pct,
+      engrave_death_y_pct: form.engrave_death_y_pct,
+      engrave_death_font_pct: form.engrave_death_font_pct,
+      engrave_religion_x_pct: form.engrave_religion_x_pct,
+      engrave_religion_y_pct: form.engrave_religion_y_pct,
+      engrave_religion_font_pct: form.engrave_religion_font_pct,
+      engrave_photo_x_pct: form.engrave_photo_x_pct,
+      engrave_photo_y_pct: form.engrave_photo_y_pct,
+      engrave_photo_size_pct: form.engrave_photo_size_pct,
     }
 
     const { error: saveError } = isEdit
@@ -163,6 +418,28 @@ export default function AdminProductForm() {
               className="mt-1.5 w-full text-base text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-accent/15 file:px-4 file:py-2 file:text-base file:font-semibold file:text-accent hover:file:bg-accent/25"
             />
           </div>
+
+          {previewImageUrl && (
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-base font-medium text-muted-foreground">
+                  각인 위치 조정 (텍스트를 드래그하거나 이미지를 클릭해 위치를 지정하세요)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="shrink-0 text-sm text-accent underline"
+                >
+                  크게 보기
+                </button>
+              </div>
+              {renderEngraveControls(false)}
+            </div>
+          )}
+
+          <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="각인 위치 조정">
+            <div className="space-y-4">{renderEngraveControls(true)}</div>
+          </Modal>
 
           {error && <p className="text-base text-destructive">{error}</p>}
 

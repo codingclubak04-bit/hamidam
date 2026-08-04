@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import Login from './routes/Login'
 import Setup from './routes/Setup'
 import SignupSalesRep from './routes/SignupSalesRep'
+import SignupPartner from './routes/SignupPartner'
 import ProtectedRoute from './routes/ProtectedRoute'
 import SuperAdminRoute from './routes/SuperAdminRoute'
 import RoleLanding from './routes/RoleLanding'
@@ -29,6 +30,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="/signup/sales-rep" element={<SignupSalesRep />} />
+            <Route path="/signup/partner" element={<SignupPartner />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<RoleLanding />} />
               <Route path="/gallery" element={<Gallery />} />

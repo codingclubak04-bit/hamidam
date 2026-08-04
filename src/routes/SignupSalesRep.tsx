@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Field } from '../components/Field'
 import { Select } from '../components/Select'
 import { AuthLayout } from '../components/AuthLayout'
+import { useAuth } from '../context/AuthContext'
 
 interface FormState {
   name: string
@@ -26,6 +27,7 @@ export default function SignupSalesRep() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { refreshProfile } = useAuth()
 
   useEffect(() => {
     supabase.rpc('list_partner_organizations').then(({ data, error: rpcError }) => {
@@ -69,12 +71,14 @@ export default function SignupSalesRep() {
       status: 'active',
     })
 
-    setLoading(false)
     if (profileError) {
+      setLoading(false)
       setError('가입 처리 실패: ' + profileError.message)
       return
     }
 
+    await refreshProfile()
+    setLoading(false)
     navigate('/')
   }
 

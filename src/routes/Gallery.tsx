@@ -62,9 +62,10 @@ export default function Gallery() {
 
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {products.map((p, i) => (
-            <div
+            <Link
               key={p.id}
-              className="overflow-hidden rounded-2xl border border-border bg-white opacity-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.35)] animate-[hamidam-fade-up_0.8s_ease-out_forwards]"
+              to={`/products/${p.id}`}
+              className="block overflow-hidden rounded-2xl border border-border bg-white opacity-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.35)] transition-transform duration-200 hover:-translate-y-1 animate-[hamidam-fade-up_0.8s_ease-out_forwards]"
               style={{ animationDelay: `${0.6 + Math.min(i, 12) * 0.06}s` }}
             >
               <div className="aspect-square bg-white p-3">
@@ -74,8 +75,8 @@ export default function Gallery() {
                   className="h-full w-full object-contain blur-[0.8px]"
                 />
               </div>
-              <p className="px-3 pb-4 text-center text-base font-medium text-foreground">{p.name}</p>
-            </div>
+              <p className="px-3 pb-4 text-center text-base font-medium text-neutral-800">{p.name}</p>
+            </Link>
           ))}
         </div>
 

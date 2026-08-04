@@ -26,6 +26,22 @@ export interface Product {
   price: number
   image_url: string | null
   is_active: boolean
+  engrave_x_pct: number
+  engrave_y_pct: number
+  engrave_font_pct: number
+  engrave_color: string
+  engrave_birth_x_pct: number
+  engrave_birth_y_pct: number
+  engrave_birth_font_pct: number
+  engrave_death_x_pct: number
+  engrave_death_y_pct: number
+  engrave_death_font_pct: number
+  engrave_religion_x_pct: number
+  engrave_religion_y_pct: number
+  engrave_religion_font_pct: number
+  engrave_photo_x_pct: number
+  engrave_photo_y_pct: number
+  engrave_photo_size_pct: number
 }
 
 export interface Organization {
@@ -42,6 +58,16 @@ export interface Organization {
 
 export type OrderStatus = 'received' | 'processing' | 'completed' | 'cancelled'
 
+export const ENGRAVE_FONTS = [
+  { value: 'Noto Serif KR', label: '본고딕 세리프 (Noto Serif KR)' },
+  { value: 'Nanum Myeongjo', label: '나눔명조' },
+  { value: 'Nanum Gothic', label: '나눔고딕' },
+  { value: 'Song Myung', label: '송명체' },
+  { value: 'Gowun Batang', label: '고운바탕' },
+] as const
+
+export const DEFAULT_ENGRAVE_FONT = 'Noto Serif KR'
+
 export interface Order {
   id: string
   sales_rep_id: string
@@ -51,6 +77,37 @@ export interface Order {
   urn_price: number | null
   tablet_product_id: string | null
   tablet_price: number | null
+  urn_engrave_x_pct: number | null
+  urn_engrave_y_pct: number | null
+  urn_engrave_font_pct: number | null
+  urn_engrave_font_family: string | null
+  urn_birth_x_pct: number | null
+  urn_birth_y_pct: number | null
+  urn_birth_font_pct: number | null
+  urn_death_x_pct: number | null
+  urn_death_y_pct: number | null
+  urn_death_font_pct: number | null
+  urn_religion_x_pct: number | null
+  urn_religion_y_pct: number | null
+  urn_religion_font_pct: number | null
+  urn_date_style: string
+  tablet_engrave_x_pct: number | null
+  tablet_engrave_y_pct: number | null
+  tablet_engrave_font_pct: number | null
+  tablet_engrave_font_family: string | null
+  tablet_birth_x_pct: number | null
+  tablet_birth_y_pct: number | null
+  tablet_birth_font_pct: number | null
+  tablet_death_x_pct: number | null
+  tablet_death_y_pct: number | null
+  tablet_death_font_pct: number | null
+  tablet_religion_x_pct: number | null
+  tablet_religion_y_pct: number | null
+  tablet_religion_font_pct: number | null
+  tablet_photo_url: string | null
+  tablet_photo_x_pct: number | null
+  tablet_photo_y_pct: number | null
+  tablet_photo_size_pct: number | null
   religion: string | null
   deceased_name: string | null
   birth_date: string | null

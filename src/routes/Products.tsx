@@ -67,7 +67,7 @@ export default function Products() {
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
       <ThemeToggle />
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl">
         <div className="mb-6 flex items-center gap-3">
           <MoonMark className="h-9 w-9" />
           <div>
@@ -108,7 +108,7 @@ export default function Products() {
               <h2 className="font-serif-kr mb-3 text-lg font-bold text-foreground">
                 {category} <span className="text-base font-normal text-muted-foreground">({items.length})</span>
               </h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {items.map((p) => (
                   <Link
                     key={p.id}

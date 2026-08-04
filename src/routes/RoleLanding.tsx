@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { MoonMark } from '../components/MoonMark'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { SplashIntro } from '../components/SplashIntro'
+import { NotificationBanner } from '../components/NotificationBanner'
 import {
   IconBox,
   IconChevronRight,
@@ -80,6 +81,8 @@ export default function RoleLanding() {
               </span>
             </div>
           </div>
+
+          <NotificationBanner profileId={profile.id} />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Link
