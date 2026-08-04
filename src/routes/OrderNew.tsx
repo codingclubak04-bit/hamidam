@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from '../components/MoonMark'
@@ -8,7 +8,7 @@ import { Field } from '../components/Field'
 import { Select } from '../components/Select'
 import { Modal } from '../components/Modal'
 import { EngravePreview, type EngraveElement, type EngravePhoto } from '../components/EngravePreview'
-import { ENGRAVE_FONTS, DEFAULT_ENGRAVE_FONT, type Product, type ProductType } from '../lib/types'
+import { ENGRAVE_FONTS, DEFAULT_ENGRAVE_FONT, type Product } from '../lib/types'
 import {
   formatBirthEngrave,
   formatDeathEngrave,
@@ -290,12 +290,6 @@ const crematoriums = [
 ]
 const CUSTOM_CREMATORIUM = '직접입력'
 
-const productTypeLabel: Record<ProductType, string> = {
-  urn: '유골함',
-  tablet: '위패',
-  other: '기타',
-}
-
 function ProductPicker({
   label,
   type,
@@ -387,7 +381,6 @@ function ProductPicker({
 
 export default function OrderNew() {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
   const [products, setProducts] = useState<Product[]>([])
