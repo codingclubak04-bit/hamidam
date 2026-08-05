@@ -1,4 +1,5 @@
 import type { EngraveElement, EngravePhoto } from '../components/EngravePreview'
+import { religionIconFromSymbol } from './engrave'
 
 const DEFAULT_SIZE = 1200
 
@@ -78,6 +79,26 @@ function drawHorizontalText(ctx: CanvasRenderingContext2D, el: EngraveElement, s
   ctx.fillText(el.text, (el.xPct / 100) * size, (el.yPct / 100) * size)
 }
 
+// 종교 기호는 폰트 글리프 대신 고정 SVG path(viewBox 0 0 100 100)로 그려, 화면
+// 미리보기(EngravePreview)와 완전히 동일한 모양이 기기와 무관하게 나오도록 한다.
+function drawReligionIcon(
+  ctx: CanvasRenderingContext2D,
+  el: EngraveElement,
+  size: number,
+  path: string,
+  fillRule: CanvasFillRule,
+) {
+  const boxSize = (el.fontPct / 100) * size
+  const cx = (el.xPct / 100) * size
+  const topY = el.anchor === 'top' ? (el.yPct / 100) * size : (el.yPct / 100) * size - boxSize / 2
+  ctx.save()
+  ctx.fillStyle = el.color
+  ctx.translate(cx - boxSize / 2, topY)
+  ctx.scale(boxSize / 100, boxSize / 100)
+  ctx.fill(new Path2D(path), fillRule)
+  ctx.restore()
+}
+
 interface ComposeEngraveImageParams {
   imageUrl: string | null
   elements: EngraveElement[]
@@ -128,8 +149,14 @@ export async function composeEngraveImage({
 
   for (const el of elements) {
     if (!el.text) continue
-    if (el.vertical) drawVerticalText(ctx, el, size)
-    else drawHorizontalText(ctx, el, size)
+    const icon = religionIconFromSymbol(el.text)
+    if (icon) {
+      drawReligionIcon(ctx, el, size, icon.path, icon.fillRule ?? 'nonzero')
+    } else if (el.vertical) {
+      drawVerticalText(ctx, el, size)
+    } else {
+      drawHorizontalText(ctx, el, size)
+    }
   }
 
   return new Promise((resolve, reject) => {

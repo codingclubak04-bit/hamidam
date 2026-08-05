@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { religionIconFromSymbol } from '../lib/engrave'
 
 export interface EngraveElement {
   key: string
@@ -64,7 +65,7 @@ export function EngravePreview({
   }
 
   const startDrag = (
-    e: React.PointerEvent<HTMLElement>,
+    e: React.PointerEvent<Element>,
     key: string,
     xPct: number,
     yPct: number,
@@ -90,13 +91,13 @@ export function EngravePreview({
       )
     }
     const handleUp = (upEvent: PointerEvent) => {
-      target.removeEventListener('pointermove', handleMove)
-      target.removeEventListener('pointerup', handleUp)
+      target.removeEventListener('pointermove', handleMove as EventListener)
+      target.removeEventListener('pointerup', handleUp as EventListener)
       target.releasePointerCapture(upEvent.pointerId)
       if (moved) suppressClickRef.current = true
     }
-    target.addEventListener('pointermove', handleMove)
-    target.addEventListener('pointerup', handleUp)
+    target.addEventListener('pointermove', handleMove as EventListener)
+    target.addEventListener('pointerup', handleUp as EventListener)
   }
 
   return (
@@ -141,20 +142,45 @@ export function EngravePreview({
           />
         </div>
       ) : null}
-      {elements.map((el) =>
-        el.text ? (
+      {elements.map((el) => {
+        if (!el.text) return null
+        const icon = religionIconFromSymbol(el.text)
+        const positionClassName = `absolute -translate-x-1/2 whitespace-nowrap ${
+          el.anchor === 'top' ? '' : '-translate-y-1/2'
+        } ${
+          onPositionPick ? 'touch-none cursor-grab active:cursor-grabbing' : 'pointer-events-none'
+        } ${
+          elements.length > 1 && el.key === activeKey
+            ? 'outline outline-1 outline-dashed outline-accent/70'
+            : ''
+        }`
+
+        // 종교 기호는 웹폰트 글리프에 의존하면 기기별 폴백 폰트로 대체되어 모양이
+        // 달라지므로(PC/iOS 불일치), 고정 SVG path로 그려 모든 기기에서 동일하게 렌더링한다.
+        if (icon) {
+          return (
+            <svg
+              key={el.key}
+              viewBox="0 0 100 100"
+              onPointerDown={(e) => startDrag(e, el.key, el.xPct, el.yPct)}
+              className={positionClassName}
+              style={{
+                left: `${el.xPct}%`,
+                top: `${el.yPct}%`,
+                width: `${el.fontPct}cqw`,
+                height: `${el.fontPct}cqw`,
+              }}
+            >
+              <path d={icon.path} fill={el.color} fillRule={icon.fillRule} />
+            </svg>
+          )
+        }
+
+        return (
           <span
             key={el.key}
             onPointerDown={(e) => startDrag(e, el.key, el.xPct, el.yPct)}
-            className={`absolute -translate-x-1/2 whitespace-nowrap ${
-              el.anchor === 'top' ? '' : '-translate-y-1/2'
-            } ${
-              onPositionPick ? 'touch-none cursor-grab active:cursor-grabbing' : 'pointer-events-none'
-            } ${
-              elements.length > 1 && el.key === activeKey
-                ? 'outline outline-1 outline-dashed outline-accent/70'
-                : ''
-            }`}
+            className={positionClassName}
             style={{
               left: `${el.xPct}%`,
               top: `${el.yPct}%`,
@@ -168,8 +194,8 @@ export function EngravePreview({
           >
             {el.text}
           </span>
-        ) : null,
-      )}
+        )
+      })}
     </div>
   )
 }
