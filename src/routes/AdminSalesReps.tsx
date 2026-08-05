@@ -1,25 +1,45 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { AdminShell } from '../components/AdminShell'
+import { Field } from '../components/Field'
+import { Select } from '../components/Select'
+import { Modal } from '../components/Modal'
 
 interface SalesRepRow {
   id: string
   name: string
   phone: string | null
   can_view_all_stats: boolean
+  organization_id: string | null
   organizations: { name: string } | null
+}
+
+interface PartnerOrg {
+  id: string
+  name: string
+}
+
+interface EditFormState {
+  name: string
+  phone: string
+  organizationId: string
 }
 
 export default function AdminSalesReps() {
   const [reps, setReps] = useState<SalesRepRow[]>([])
+  const [orgs, setOrgs] = useState<PartnerOrg[]>([])
   const [error, setError] = useState<string | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingRep, setEditingRep] = useState<SalesRepRow | null>(null)
+  const [editForm, setEditForm] = useState<EditFormState>({ name: '', phone: '', organizationId: '' })
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
 
   const loadReps = async () => {
     const { data, error: loadError } = await supabase
       .from('profiles')
-      .select('id, name, phone, can_view_all_stats, organizations!profiles_organization_id_fkey(name)')
+      .select('id, name, phone, can_view_all_stats, organization_id, organizations!profiles_organization_id_fkey(name)')
       .eq('role', 'sales_rep')
       .order('name')
 
@@ -32,7 +52,50 @@ export default function AdminSalesReps() {
 
   useEffect(() => {
     loadReps()
+    supabase.rpc('list_partner_organizations').then(({ data, error: rpcError }) => {
+      if (rpcError) {
+        console.error('회사 목록 조회 실패:', rpcError.message)
+        return
+      }
+      setOrgs(data ?? [])
+    })
   }, [])
+
+  const openEdit = (rep: SalesRepRow) => {
+    setEditingRep(rep)
+    setEditForm({ name: rep.name, phone: rep.phone ?? '', organizationId: rep.organization_id ?? '' })
+    setEditError(null)
+  }
+
+  const closeEdit = () => setEditingRep(null)
+
+  const updateEditForm = (key: keyof EditFormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setEditForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editingRep) return
+    setEditSaving(true)
+    setEditError(null)
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        name: editForm.name,
+        phone: editForm.phone || null,
+        organization_id: editForm.organizationId || null,
+      })
+      .eq('id', editingRep.id)
+
+    setEditSaving(false)
+
+    if (updateError) {
+      setEditError('수정 실패: ' + updateError.message)
+      return
+    }
+    closeEdit()
+    loadReps()
+  }
 
   const toggleStats = async (rep: SalesRepRow) => {
     setUpdatingId(rep.id)
@@ -95,6 +158,12 @@ export default function AdminSalesReps() {
                   {rep.can_view_all_stats ? '열람 가능' : '권한 부여'}
                 </button>
                 <button
+                  onClick={() => openEdit(rep)}
+                  className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                >
+                  수정
+                </button>
+                <button
                   onClick={() => deleteRep(rep)}
                   disabled={deletingId === rep.id}
                   className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
@@ -130,13 +199,21 @@ export default function AdminSalesReps() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => deleteRep(rep)}
-                      disabled={deletingId === rep.id}
-                      className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
-                    >
-                      삭제
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => openEdit(rep)}
+                        className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => deleteRep(rep)}
+                        disabled={deletingId === rep.id}
+                        className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -151,6 +228,29 @@ export default function AdminSalesReps() {
           </table>
         </div>
       </section>
+
+      <Modal open={editingRep !== null} onClose={closeEdit} title="팀장 정보 수정">
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <Field label="성함" value={editForm.name} onChange={updateEditForm('name')} />
+          <Field label="연락처" value={editForm.phone} onChange={updateEditForm('phone')} />
+          <Select label="소속 회사" value={editForm.organizationId} onChange={updateEditForm('organizationId')}>
+            <option value="">독립 팀장</option>
+            {orgs.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+          {editError && <p className="text-base text-destructive">{editError}</p>}
+          <button
+            type="submit"
+            disabled={editSaving}
+            className="w-full rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+          >
+            {editSaving ? '저장 중...' : '저장'}
+          </button>
+        </form>
+      </Modal>
     </AdminShell>
   )
 }
