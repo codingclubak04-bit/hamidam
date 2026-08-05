@@ -1,13 +1,18 @@
 import { createPortal } from 'react-dom'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 
-const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000
+const UPDATE_CHECK_INTERVAL_MS = 60 * 1000
 
 export function UpdatePrompt() {
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
     onRegisteredSW(_url, registration) {
       if (!registration) return
+
       setInterval(() => registration.update(), UPDATE_CHECK_INTERVAL_MS)
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') registration.update()
+      })
     },
   })
 
