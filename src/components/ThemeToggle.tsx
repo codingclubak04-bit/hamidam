@@ -1,6 +1,6 @@
 import { useTheme } from '../context/ThemeContext'
 
-export function ThemeToggle() {
+export function ThemeToggle({ inline = false }: { inline?: boolean }) {
   const { theme, toggleTheme } = useTheme()
 
   return (
@@ -8,7 +8,11 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
-      className="fixed right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground/70 backdrop-blur transition hover:border-accent hover:text-accent"
+      className={
+        inline
+          ? 'inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground/70 transition hover:bg-input hover:text-accent'
+          : 'fixed right-4 top-4 z-40 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface/95 text-foreground/70 shadow-sm backdrop-blur transition hover:border-accent hover:text-accent'
+      }
     >
       {theme === 'dark' ? (
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">

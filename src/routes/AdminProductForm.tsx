@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { AdminShell } from '../components/AdminShell'
 import { Field } from '../components/Field'
@@ -7,6 +7,7 @@ import { Select } from '../components/Select'
 import { Modal } from '../components/Modal'
 import { EngravePreview, type EngraveElement, type EngravePhoto } from '../components/EngravePreview'
 import { formatBirthEngrave, formatDeathEngrave, religionSymbol } from '../lib/engrave'
+import { IconChevronRight } from '../components/DashboardIcons'
 import type { ProductType } from '../lib/types'
 
 interface FormState {
@@ -101,6 +102,9 @@ export default function AdminProductForm() {
   const [sampleReligion, setSampleReligion] = useState<string>('기독교')
   const [activeKey, setActiveKey] = useState<TabletTabKey>('name')
   const [modalOpen, setModalOpen] = useState(false)
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([])
+  const [categoryTypeMap, setCategoryTypeMap] = useState<Record<string, ProductType>>({})
+  const [customCategory, setCustomCategory] = useState(false)
 
   const filePreviewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
   useEffect(() => {
@@ -304,6 +308,23 @@ export default function AdminProductForm() {
     load()
   }, [id, isEdit])
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      const { data } = await supabase.from('products').select('category, type').order('category')
+      if (data) {
+        setCategoryOptions(Array.from(new Set(data.map((d) => d.category))))
+        setCategoryTypeMap(Object.fromEntries(data.map((d) => [d.category, d.type])))
+      }
+    }
+    loadCategories()
+  }, [])
+
+  useEffect(() => {
+    if (form.category && categoryOptions.length > 0 && !categoryOptions.includes(form.category)) {
+      setCustomCategory(true)
+    }
+  }, [form.category, categoryOptions])
+
   const update = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -375,9 +396,20 @@ export default function AdminProductForm() {
     navigate('/admin/products')
   }
 
+  const BackToList = () => (
+    <Link
+      to="/admin/products"
+      className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-sm font-medium text-muted-foreground hover:border-accent hover:text-accent"
+    >
+      <IconChevronRight className="h-3.5 w-3.5 rotate-180" />
+      상품 목록으로
+    </Link>
+  )
+
   if (loading) {
     return (
       <AdminShell title={isEdit ? '상품 수정' : '새 상품 등록'}>
+        <BackToList />
         <p className="text-base text-muted-foreground">불러오는 중...</p>
       </AdminShell>
     )
@@ -385,9 +417,47 @@ export default function AdminProductForm() {
 
   return (
     <AdminShell title={isEdit ? '상품 수정' : '새 상품 등록'}>
+      <BackToList />
       <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="카테고리" value={form.category} onChange={update('category')} />
+          {customCategory ? (
+            <div>
+              <Field label="카테고리 (직접 입력)" value={form.category} onChange={update('category')} />
+              {categoryOptions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCustomCategory(false)}
+                  className="mt-1.5 text-sm text-accent underline"
+                >
+                  목록에서 선택
+                </button>
+              )}
+            </div>
+          ) : (
+            <Select
+              label="카테고리"
+              value={form.category}
+              onChange={(e) => {
+                if (e.target.value === '__custom__') {
+                  setCustomCategory(true)
+                  setForm((f) => ({ ...f, category: '' }))
+                  return
+                }
+                const nextType = categoryTypeMap[e.target.value]
+                setForm((f) => ({ ...f, category: e.target.value, type: nextType ?? f.type }))
+              }}
+            >
+              <option value="" disabled>
+                카테고리를 선택하세요
+              </option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+              <option value="__custom__">+ 새 카테고리 직접 입력</option>
+            </Select>
+          )}
           <Select label="분류" value={form.type} onChange={update('type')}>
             <option value="urn">유골함</option>
             <option value="tablet">위패</option>

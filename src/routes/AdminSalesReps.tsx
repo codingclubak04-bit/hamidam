@@ -14,6 +14,7 @@ export default function AdminSalesReps() {
   const [reps, setReps] = useState<SalesRepRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const loadReps = async () => {
     const { data, error: loadError } = await supabase
@@ -49,6 +50,23 @@ export default function AdminSalesReps() {
     loadReps()
   }
 
+  const deleteRep = async (rep: SalesRepRow) => {
+    if (!window.confirm(`"${rep.name}" 팀장 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return
+
+    setDeletingId(rep.id)
+    setError(null)
+    const { data, error: invokeError } = await supabase.functions.invoke('admin-delete-user', {
+      body: { userId: rep.id },
+    })
+    setDeletingId(null)
+
+    if (invokeError || data?.error) {
+      setError('삭제 실패: ' + (data?.error ?? invokeError?.message ?? '알 수 없는 오류'))
+      return
+    }
+    loadReps()
+  }
+
   const toggleButtonClass = (rep: SalesRepRow) =>
     'shrink-0 rounded-lg px-4 py-2 text-base font-semibold disabled:opacity-50 ' +
     (rep.can_view_all_stats
@@ -65,22 +83,31 @@ export default function AdminSalesReps() {
         {error && <p className="mt-3 text-base text-destructive">{error}</p>}
         <ul className="mt-4 divide-y divide-border md:hidden">
           {reps.map((rep) => (
-            <li key={rep.id} className="flex items-center justify-between gap-4 py-3">
+            <li key={rep.id} className="flex flex-col gap-3 py-3">
               <div>
                 <p className="text-base font-semibold text-foreground">{rep.name}</p>
                 <p className="text-base text-muted-foreground">
                   {rep.phone || '연락처 미입력'} · {rep.organizations?.name ?? '독립 팀장'}
                 </p>
               </div>
-              <button onClick={() => toggleStats(rep)} disabled={updatingId === rep.id} className={toggleButtonClass(rep)}>
-                {rep.can_view_all_stats ? '전체 현황 열람 가능' : '전체 현황 열람 권한 부여'}
-              </button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button onClick={() => toggleStats(rep)} disabled={updatingId === rep.id} className={toggleButtonClass(rep)}>
+                  {rep.can_view_all_stats ? '열람 가능' : '권한 부여'}
+                </button>
+                <button
+                  onClick={() => deleteRep(rep)}
+                  disabled={deletingId === rep.id}
+                  className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
             </li>
           ))}
           {reps.length === 0 && <li className="py-3 text-base text-muted-foreground">가입한 팀장이 없습니다.</li>}
         </ul>
 
-        <div className="mt-4 hidden overflow-hidden rounded-xl border border-border md:block">
+        <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border md:block">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
@@ -88,6 +115,7 @@ export default function AdminSalesReps() {
                 <th className="px-4 py-3 font-medium">연락처</th>
                 <th className="px-4 py-3 font-medium">소속</th>
                 <th className="px-4 py-3 font-medium text-right">전체 현황 열람</th>
+                <th className="px-4 py-3 font-medium text-right">액션</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -98,14 +126,23 @@ export default function AdminSalesReps() {
                   <td className="px-4 py-3 text-base text-muted-foreground">{rep.organizations?.name ?? '독립 팀장'}</td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => toggleStats(rep)} disabled={updatingId === rep.id} className={toggleButtonClass(rep)}>
-                      {rep.can_view_all_stats ? '전체 현황 열람 가능' : '전체 현황 열람 권한 부여'}
+                      {rep.can_view_all_stats ? '열람 가능' : '권한 부여'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => deleteRep(rep)}
+                      disabled={deletingId === rep.id}
+                      className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                    >
+                      삭제
                     </button>
                   </td>
                 </tr>
               ))}
               {reps.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-3 text-base text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-3 text-base text-muted-foreground">
                     가입한 팀장이 없습니다.
                   </td>
                 </tr>

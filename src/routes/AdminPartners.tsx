@@ -2,7 +2,14 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { AdminShell } from '../components/AdminShell'
 import { Field } from '../components/Field'
+import { Modal } from '../components/Modal'
 import type { Organization } from '../lib/types'
+
+interface EditFormState {
+  name: string
+  businessRegNo: string
+  contactPhone: string
+}
 
 interface FormState {
   orgName: string
@@ -43,6 +50,11 @@ export default function AdminPartners() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [decidingId, setDecidingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null)
+  const [editForm, setEditForm] = useState<EditFormState>({ name: '', businessRegNo: '', contactPhone: '' })
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
 
   const loadOrgs = async () => {
     const { data, error: loadError } = await supabase
@@ -76,8 +88,67 @@ export default function AdminPartners() {
     loadOrgs()
   }
 
+  const deleteOrg = async (org: Organization) => {
+    if (!window.confirm(`"${org.name}" 파트너사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return
+
+    setDeletingId(org.id)
+    setError(null)
+    const { error: deleteError } = await supabase.from('organizations').delete().eq('id', org.id)
+    setDeletingId(null)
+
+    if (deleteError) {
+      if (deleteError.code === '23503') {
+        setError('소속된 관리자/팀장 또는 주문 이력이 있어 삭제할 수 없습니다.')
+      } else {
+        setError('삭제 실패: ' + deleteError.message)
+      }
+      return
+    }
+    loadOrgs()
+  }
+
   const update = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const openEdit = (org: Organization) => {
+    setEditingOrg(org)
+    setEditForm({
+      name: org.name,
+      businessRegNo: org.business_reg_no ?? '',
+      contactPhone: org.contact_phone ?? '',
+    })
+    setEditError(null)
+  }
+
+  const closeEdit = () => setEditingOrg(null)
+
+  const updateEditForm = (key: keyof EditFormState) => (e: ChangeEvent<HTMLInputElement>) =>
+    setEditForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editingOrg) return
+    setEditSaving(true)
+    setEditError(null)
+
+    const { error: updateError } = await supabase
+      .from('organizations')
+      .update({
+        name: editForm.name,
+        business_reg_no: editForm.businessRegNo || null,
+        contact_phone: editForm.contactPhone || null,
+      })
+      .eq('id', editingOrg.id)
+
+    setEditSaving(false)
+
+    if (updateError) {
+      setEditError('수정 실패: ' + updateError.message)
+      return
+    }
+    closeEdit()
+    loadOrgs()
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -138,6 +209,7 @@ export default function AdminPartners() {
 
       <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
         <h2 className="font-serif-kr text-xl font-bold text-foreground">등록된 파트너사 ({orgs.length})</h2>
+        {error && <p className="mt-2 text-base text-destructive">{error}</p>}
         <ul className="mt-4 divide-y divide-border md:hidden">
           {orgs.map((org) => (
             <li key={org.id} className="py-3">
@@ -152,30 +224,45 @@ export default function AdminPartners() {
               <p className="text-base text-muted-foreground">
                 {org.business_reg_no || '사업자번호 미입력'} · {org.contact_phone || '연락처 미입력'}
               </p>
-              {org.status === 'pending' && (
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => decide(org.id, 'approve')}
-                    disabled={decidingId === org.id}
-                    className="rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-2 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
-                  >
-                    승인
-                  </button>
-                  <button
-                    onClick={() => decide(org.id, 'reject')}
-                    disabled={decidingId === org.id}
-                    className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
-                  >
-                    거부
-                  </button>
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {org.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => decide(org.id, 'approve')}
+                      disabled={decidingId === org.id}
+                      className="rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-2 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+                    >
+                      승인
+                    </button>
+                    <button
+                      onClick={() => decide(org.id, 'reject')}
+                      disabled={decidingId === org.id}
+                      className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                    >
+                      거부
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => openEdit(org)}
+                  className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => deleteOrg(org)}
+                  disabled={deletingId === org.id}
+                  className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
             </li>
           ))}
           {orgs.length === 0 && <li className="py-3 text-base text-muted-foreground">등록된 파트너사가 없습니다.</li>}
         </ul>
 
-        <div className="mt-4 hidden overflow-hidden rounded-xl border border-border md:block">
+        <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border md:block">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
@@ -198,24 +285,39 @@ export default function AdminPartners() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {org.status === 'pending' && (
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => decide(org.id, 'approve')}
-                          disabled={decidingId === org.id}
-                          className="rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-2 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
-                        >
-                          승인
-                        </button>
-                        <button
-                          onClick={() => decide(org.id, 'reject')}
-                          disabled={decidingId === org.id}
-                          className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
-                        >
-                          거부
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex justify-end gap-2">
+                      {org.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => decide(org.id, 'approve')}
+                            disabled={decidingId === org.id}
+                            className="rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-2 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+                          >
+                            승인
+                          </button>
+                          <button
+                            onClick={() => decide(org.id, 'reject')}
+                            disabled={decidingId === org.id}
+                            className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                          >
+                            거부
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => openEdit(org)}
+                        className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => deleteOrg(org)}
+                        disabled={deletingId === org.id}
+                        className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -230,6 +332,22 @@ export default function AdminPartners() {
           </table>
         </div>
       </section>
+
+      <Modal open={editingOrg !== null} onClose={closeEdit} title="파트너사 정보 수정">
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <Field label="장례회사명" value={editForm.name} onChange={updateEditForm('name')} />
+          <Field label="사업자등록번호" value={editForm.businessRegNo} onChange={updateEditForm('businessRegNo')} />
+          <Field label="대표 연락처" value={editForm.contactPhone} onChange={updateEditForm('contactPhone')} />
+          {editError && <p className="text-base text-destructive">{editError}</p>}
+          <button
+            type="submit"
+            disabled={editSaving}
+            className="w-full rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+          >
+            {editSaving ? '저장 중...' : '저장'}
+          </button>
+        </form>
+      </Modal>
     </AdminShell>
   )
 }

@@ -15,6 +15,8 @@ export default function AdminProducts() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const loadProducts = async () => {
     const { data, error: loadError } = await supabase
@@ -36,15 +38,26 @@ export default function AdminProducts() {
     loadProducts()
   }, [])
 
+  const filteredProducts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return products
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.model_code.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q),
+    )
+  }, [products, search])
+
   const grouped = useMemo(() => {
     const map = new Map<string, Product[]>()
-    for (const p of products) {
+    for (const p of filteredProducts) {
       const list = map.get(p.category) ?? []
       list.push(p)
       map.set(p.category, list)
     }
     return Array.from(map.entries())
-  }, [products])
+  }, [filteredProducts])
 
   const toggleButtonClass = (p: Product) =>
     'shrink-0 rounded-lg px-4 py-2 text-base font-semibold disabled:opacity-50 ' +
@@ -68,17 +81,46 @@ export default function AdminProducts() {
     loadProducts()
   }
 
+  const deleteProduct = async (product: Product) => {
+    if (!window.confirm(`"${product.name}" 상품을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return
+
+    setDeletingId(product.id)
+    const { error: deleteError } = await supabase.from('products').delete().eq('id', product.id)
+    setDeletingId(null)
+
+    if (deleteError) {
+      if (deleteError.code === '23503') {
+        setError('해당 상품으로 접수된 주문이 있어 삭제할 수 없습니다. 대신 비활성화를 이용해주세요.')
+      } else {
+        setError('삭제 실패: ' + deleteError.message)
+      }
+      return
+    }
+    setError(null)
+    loadProducts()
+  }
+
   return (
     <AdminShell title="상품 관리">
-      <div className="flex items-center justify-between">
-        <p className="text-base text-muted-foreground">총 {products.length}개 상품</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-base text-muted-foreground">
+          {search ? `검색 결과 ${filteredProducts.length}개` : `총 ${products.length}개 상품`}
+        </p>
         <Link
           to="/admin/products/new"
-          className="rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-2.5 text-base font-semibold text-accent-foreground hover:brightness-105"
+          className="shrink-0 rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-2.5 text-base font-semibold text-accent-foreground hover:brightness-105"
         >
           + 새 상품 등록
         </Link>
       </div>
+
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="상품명, 모델코드, 카테고리 검색"
+        className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+      />
 
       {error && <p className="text-base text-destructive">{error}</p>}
       {loading && <p className="text-base text-muted-foreground">불러오는 중...</p>}
@@ -89,45 +131,56 @@ export default function AdminProducts() {
             <h2 className="font-serif-kr mb-3 text-lg font-bold text-foreground">
               {category} <span className="text-base font-normal text-muted-foreground">({items.length})</span>
             </h2>
-            <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface/80 backdrop-blur md:hidden">
+            <div className="divide-y divide-border rounded-2xl border border-border bg-surface/80 backdrop-blur md:hidden">
               {items.map((p) => (
-                <div key={p.id} className="flex items-center gap-4 px-5 py-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-input">
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                        사진 없음
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-semibold text-foreground">
-                      {p.name}
-                      {!p.is_active && (
-                        <span className="ml-2 rounded-full bg-destructive/15 px-2.5 py-0.5 text-sm font-medium text-destructive">
-                          비활성화됨
-                        </span>
+                <div key={p.id} className="flex flex-col gap-3 px-5 py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-input">
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                          사진 없음
+                        </div>
                       )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {p.model_code} · {typeLabel[p.type]} · {p.price.toLocaleString()}원
-                    </p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-semibold text-foreground">
+                        {p.name}
+                        {!p.is_active && (
+                          <span className="ml-2 rounded-full bg-destructive/15 px-2.5 py-0.5 text-sm font-medium text-destructive">
+                            비활성화됨
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {p.model_code} · {typeLabel[p.type]} · {p.price.toLocaleString()}원
+                      </p>
+                    </div>
                   </div>
-                  <Link
-                    to={`/admin/products/${p.id}/edit`}
-                    className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
-                  >
-                    수정
-                  </Link>
-                  <button onClick={() => toggleActive(p)} disabled={updatingId === p.id} className={toggleButtonClass(p)}>
-                    {p.is_active ? '비활성화' : '활성화'}
-                  </button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Link
+                      to={`/admin/products/${p.id}/edit`}
+                      className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                    >
+                      수정
+                    </Link>
+                    <button onClick={() => toggleActive(p)} disabled={updatingId === p.id} className={toggleButtonClass(p)}>
+                      {p.is_active ? '비활성화' : '활성화'}
+                    </button>
+                    <button
+                      onClick={() => deleteProduct(p)}
+                      disabled={deletingId === p.id}
+                      className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface/80 backdrop-blur md:block">
+            <div className="hidden overflow-x-auto rounded-2xl border border-border bg-surface/80 backdrop-blur md:block">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
@@ -175,6 +228,13 @@ export default function AdminProducts() {
                           <button onClick={() => toggleActive(p)} disabled={updatingId === p.id} className={toggleButtonClass(p)}>
                             {p.is_active ? '비활성화' : '활성화'}
                           </button>
+                          <button
+                            onClick={() => deleteProduct(p)}
+                            disabled={deletingId === p.id}
+                            className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                          >
+                            삭제
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -185,7 +245,9 @@ export default function AdminProducts() {
           </section>
         ))}
         {!loading && grouped.length === 0 && (
-          <p className="text-base text-muted-foreground">등록된 상품이 없습니다.</p>
+          <p className="text-base text-muted-foreground">
+            {search ? '검색 결과가 없습니다.' : '등록된 상품이 없습니다.'}
+          </p>
         )}
       </div>
     </AdminShell>

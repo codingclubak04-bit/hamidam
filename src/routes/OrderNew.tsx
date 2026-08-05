@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from '../components/MoonMark'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { PageHeader } from '../components/PageHeader'
 import { Field } from '../components/Field'
 import { Select } from '../components/Select'
 import { Modal } from '../components/Modal'
@@ -614,17 +615,9 @@ export default function OrderNew() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
-      <ThemeToggle />
+      <PageHeader />
       <div className="mx-auto max-w-2xl lg:max-w-4xl xl:max-w-5xl">
-        <div className="mb-6 flex items-center gap-3">
-          <MoonMark className="h-9 w-9" />
-          <div>
-            <Link to="/" className="text-base text-muted-foreground hover:text-accent hover:underline">
-              ← 대시보드로
-            </Link>
-            <h1 className="font-serif-kr text-2xl font-bold text-foreground">주문서 작성</h1>
-          </div>
-        </div>
+        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">주문서 작성</h1>
 
         <form onSubmit={handleSubmit} className="lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-6">
         <div className="space-y-8 rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">

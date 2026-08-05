@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { MoonMark } from '../components/MoonMark'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { PageHeader } from '../components/PageHeader'
 import type { OrderStatus } from '../lib/types'
 
 const statusLabel: Record<OrderStatus, string> = {
@@ -77,17 +76,9 @@ export default function Orders() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
-      <ThemeToggle />
+      <PageHeader />
       <div className="mx-auto max-w-3xl md:max-w-4xl lg:max-w-5xl">
-        <div className="mb-6 flex items-center gap-3">
-          <MoonMark className="h-9 w-9" />
-          <div>
-            <Link to="/" className="text-base text-muted-foreground hover:text-accent hover:underline">
-              ← 대시보드로
-            </Link>
-            <h1 className="font-serif-kr text-2xl font-bold text-foreground">주문 목록</h1>
-          </div>
-        </div>
+        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">주문 목록</h1>
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row">
           <input

@@ -63,23 +63,29 @@ export default function RoleLanding() {
     <>
       {showSplash && <SplashIntro onDone={dismissSplash} />}
       <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-8">
-        <ThemeToggle />
-        <button
-          onClick={signOut}
-          className="fixed left-4 top-4 z-10 text-sm text-muted-foreground transition hover:text-accent"
-        >
-          로그아웃
-        </button>
+        <header className="sticky top-0 z-40 -mx-4 -mt-8 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2">
+            <MoonMark className="h-7 w-7" />
+            <span className="font-serif-kr text-base font-bold text-foreground">하미담</span>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <ThemeToggle inline />
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-input hover:text-accent"
+            >
+              로그아웃
+            </button>
+          </div>
+        </header>
 
-        <div className="mx-auto max-w-xl pt-10">
-          <div className="mb-8 flex items-start gap-3">
-            <MoonMark className="mt-1 h-11 w-11 shrink-0" />
-            <div>
-              <h1 className="font-serif-kr text-2xl font-bold text-foreground">{profile.name}님, 안녕하세요</h1>
-              <span className="mt-1.5 inline-block rounded-full bg-accent/15 px-3 py-0.5 text-sm font-medium text-accent">
-                {roleLabel}
-              </span>
-            </div>
+        <div className="mx-auto max-w-xl">
+          <div className="mb-8">
+            <span className="inline-block rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-medium text-accent">
+              {roleLabel}
+            </span>
+            <h1 className="mt-1.5 font-serif-kr text-lg font-semibold text-foreground">{profile.name}님, 안녕하세요</h1>
           </div>
 
           <NotificationBanner profileId={profile.id} />

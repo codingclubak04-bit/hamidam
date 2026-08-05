@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { MoonMark } from '../components/MoonMark'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { PageHeader } from '../components/PageHeader'
 import { Select } from '../components/Select'
 import type { Product, ProductType } from '../lib/types'
 
@@ -37,6 +36,15 @@ export default function Products() {
       setLoading(false)
     }
     load()
+
+    const channel = supabase
+      .channel('products-list-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => load())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const categories = useMemo(
@@ -66,17 +74,9 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
-      <ThemeToggle />
+      <PageHeader />
       <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl">
-        <div className="mb-6 flex items-center gap-3">
-          <MoonMark className="h-9 w-9" />
-          <div>
-            <Link to="/" className="text-base text-muted-foreground hover:text-accent hover:underline">
-              ← 대시보드로
-            </Link>
-            <h1 className="font-serif-kr text-2xl font-bold text-foreground">상품 목록</h1>
-          </div>
-        </div>
+        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">상품 목록</h1>
 
         <section className="mb-6 grid grid-cols-1 gap-4 rounded-2xl border border-border bg-surface/80 p-6 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur sm:grid-cols-2">
           <Select label="분류" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'all' | ProductType)}>

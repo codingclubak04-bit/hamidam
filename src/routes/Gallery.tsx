@@ -1,20 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { MoonMark } from '../components/MoonMark'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { PageHeader } from '../components/PageHeader'
 import type { Product } from '../lib/types'
 
 export default function Gallery() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     const load = async () => {
       const { data, error: loadError } = await supabase
         .from('products')
         .select('id, category, type, name, model_code, spec, price, image_url')
+        .eq('is_active', true)
         .not('image_url', 'is', null)
         .order('category')
         .order('name')
@@ -28,19 +29,32 @@ export default function Gallery() {
       setLoading(false)
     }
     load()
+
+    const channel = supabase
+      .channel('gallery-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => load())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
+
+  const filteredProducts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return products
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.model_code.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q),
+    )
+  }, [products, search])
 
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
-      <ThemeToggle />
+      <PageHeader />
       <div className="mx-auto max-w-5xl">
-        <div className="mb-10 flex items-center gap-3">
-          <MoonMark className="h-9 w-9" />
-          <Link to="/" className="text-base text-muted-foreground hover:text-accent hover:underline">
-            ← 대시보드로
-          </Link>
-        </div>
-
         <div className="mx-auto mb-14 max-w-xl text-center">
           <h1 className="font-serif-kr text-2xl font-bold text-foreground opacity-0 animate-[hamidam-fade-up_1s_ease-out_forwards]">
             하미담 갤러리
@@ -57,11 +71,24 @@ export default function Gallery() {
           </p>
         </div>
 
+        <div className="mx-auto mb-8 max-w-md">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="상품명, 모델코드, 카테고리 검색"
+            className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+
         {loading && <p className="text-center text-base text-muted-foreground">불러오는 중...</p>}
         {error && <p className="text-center text-base text-destructive">{error}</p>}
+        {!loading && !error && search && (
+          <p className="mb-4 text-center text-base text-muted-foreground">검색 결과 {filteredProducts.length}개</p>
+        )}
 
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((p, i) => (
+          {filteredProducts.map((p, i) => (
             <Link
               key={p.id}
               to={`/products/${p.id}`}
@@ -80,8 +107,10 @@ export default function Gallery() {
           ))}
         </div>
 
-        {!loading && !error && products.length === 0 && (
-          <p className="text-center text-base text-muted-foreground">표시할 상품이 없습니다.</p>
+        {!loading && !error && filteredProducts.length === 0 && (
+          <p className="text-center text-base text-muted-foreground">
+            {search ? '검색 결과가 없습니다.' : '표시할 상품이 없습니다.'}
+          </p>
         )}
 
         {!loading && (

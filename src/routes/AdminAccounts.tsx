@@ -4,6 +4,14 @@ import { useAuth } from '../context/AuthContext'
 import { AdminShell } from '../components/AdminShell'
 import { Field } from '../components/Field'
 import { Select } from '../components/Select'
+import { Modal } from '../components/Modal'
+
+interface EditFormState {
+  name: string
+  phone: string
+  role: 'super_admin' | 'org_admin'
+  organizationId: string
+}
 
 interface FormState {
   name: string
@@ -25,6 +33,7 @@ interface AdminRow {
   name: string
   phone: string | null
   status: string
+  organization_id: string | null
   organizations: { name: string } | null
 }
 
@@ -46,11 +55,16 @@ export default function AdminAccounts() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingAdmin, setEditingAdmin] = useState<AdminRow | null>(null)
+  const [editForm, setEditForm] = useState<EditFormState>({ name: '', phone: '', role: 'super_admin', organizationId: '' })
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
 
   const loadAdmins = async () => {
     const { data, error: loadError } = await supabase
       .from('profiles')
-      .select('id, role, name, phone, status, organizations!profiles_organization_id_fkey(name)')
+      .select('id, role, name, phone, status, organization_id, organizations!profiles_organization_id_fkey(name)')
       .in('role', ['super_admin', 'org_admin'])
       .order('role')
       .order('name')
@@ -124,6 +138,71 @@ export default function AdminAccounts() {
     loadAdmins()
   }
 
+  const deleteAdmin = async (row: AdminRow) => {
+    if (!window.confirm(`"${row.name}" 관리자 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return
+
+    setDeletingId(row.id)
+    setError(null)
+    const { data, error: invokeError } = await supabase.functions.invoke('admin-delete-user', {
+      body: { userId: row.id },
+    })
+    setDeletingId(null)
+
+    if (invokeError || data?.error) {
+      setError('삭제 실패: ' + (data?.error ?? invokeError?.message ?? '알 수 없는 오류'))
+      return
+    }
+    loadAdmins()
+  }
+
+  const openEdit = (row: AdminRow) => {
+    setEditingAdmin(row)
+    setEditForm({
+      name: row.name,
+      phone: row.phone ?? '',
+      role: row.role,
+      organizationId: row.organization_id ?? '',
+    })
+    setEditError(null)
+  }
+
+  const closeEdit = () => setEditingAdmin(null)
+
+  const updateEditForm = (key: keyof EditFormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setEditForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editingAdmin) return
+
+    if (editForm.role === 'org_admin' && !editForm.organizationId) {
+      setEditError('조직관리자는 소속 회사를 선택해야 합니다.')
+      return
+    }
+
+    setEditSaving(true)
+    setEditError(null)
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        name: editForm.name,
+        phone: editForm.phone || null,
+        role: editForm.role,
+        organization_id: editForm.role === 'org_admin' ? editForm.organizationId : null,
+      })
+      .eq('id', editingAdmin.id)
+
+    setEditSaving(false)
+
+    if (updateError) {
+      setEditError('수정 실패: ' + updateError.message)
+      return
+    }
+    closeEdit()
+    loadAdmins()
+  }
+
   const roleLabel = { super_admin: '슈퍼관리자', org_admin: '조직관리자' } as const
 
   const toggleButtonClass = (row: AdminRow) =>
@@ -174,7 +253,7 @@ export default function AdminAccounts() {
         <h2 className="font-serif-kr text-xl font-bold text-foreground">전체 관리자 ({admins.length})</h2>
         <ul className="mt-4 divide-y divide-border md:hidden">
           {admins.map((row) => (
-            <li key={row.id} className="flex items-center justify-between gap-4 py-3">
+            <li key={row.id} className="flex flex-col gap-3 py-3">
               <div>
                 <p className="text-base font-semibold text-foreground">
                   {row.name}
@@ -192,16 +271,31 @@ export default function AdminAccounts() {
                 </p>
               </div>
               {row.id !== profile?.id && (
-                <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
-                  {row.status === 'disabled' ? '활성화' : '비활성화'}
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
+                    {row.status === 'disabled' ? '활성화' : '비활성화'}
+                  </button>
+                  <button
+                    onClick={() => openEdit(row)}
+                    className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                  >
+                    수정
+                  </button>
+                  <button
+                    onClick={() => deleteAdmin(row)}
+                    disabled={deletingId === row.id}
+                    className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                  >
+                    삭제
+                  </button>
+                </div>
               )}
             </li>
           ))}
           {admins.length === 0 && <li className="py-3 text-base text-muted-foreground">등록된 관리자가 없습니다.</li>}
         </ul>
 
-        <div className="mt-4 hidden overflow-hidden rounded-xl border border-border md:block">
+        <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border md:block">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
@@ -230,9 +324,24 @@ export default function AdminAccounts() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.id !== profile?.id && (
-                      <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
-                        {row.status === 'disabled' ? '활성화' : '비활성화'}
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
+                          {row.status === 'disabled' ? '활성화' : '비활성화'}
+                        </button>
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => deleteAdmin(row)}
+                          disabled={deletingId === row.id}
+                          className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                        >
+                          삭제
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -248,6 +357,35 @@ export default function AdminAccounts() {
           </table>
         </div>
       </section>
+
+      <Modal open={editingAdmin !== null} onClose={closeEdit} title="관리자 정보 수정">
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <Field label="성함" value={editForm.name} onChange={updateEditForm('name')} />
+          <Field label="연락처" value={editForm.phone} onChange={updateEditForm('phone')} />
+          <Select label="역할" value={editForm.role} onChange={updateEditForm('role')}>
+            <option value="super_admin">슈퍼관리자</option>
+            <option value="org_admin">조직관리자</option>
+          </Select>
+          {editForm.role === 'org_admin' && (
+            <Select label="소속 회사" value={editForm.organizationId} onChange={updateEditForm('organizationId')}>
+              <option value="">선택해주세요</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {editError && <p className="text-base text-destructive">{editError}</p>}
+          <button
+            type="submit"
+            disabled={editSaving}
+            className="w-full rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+          >
+            {editSaving ? '저장 중...' : '저장'}
+          </button>
+        </form>
+      </Modal>
     </AdminShell>
   )
 }

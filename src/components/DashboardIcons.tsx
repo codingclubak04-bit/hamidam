@@ -94,3 +94,22 @@ export function IconChevronRight({ className }: IconProps) {
     </svg>
   )
 }
+
+export function IconHome({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 11.5L12 4l8 7.5" />
+      <path d="M6 10v9a1 1 0 001 1h3v-5h4v5h3a1 1 0 001-1v-9" />
+    </svg>
+  )
+}
+
+export function IconLogout({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3" />
+      <path d="M15 16l4-4-4-4" />
+      <path d="M19 12H9" />
+    </svg>
+  )
+}
