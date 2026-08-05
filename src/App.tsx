@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { BgmProvider } from './context/BgmContext'
+import { PushNavigationListener } from './components/PushNavigationListener'
 import Login from './routes/Login'
 import Setup from './routes/Setup'
 import SignupSalesRep from './routes/SignupSalesRep'
@@ -30,6 +31,7 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <BgmProvider>
+            <PushNavigationListener />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/setup" element={<Setup />} />

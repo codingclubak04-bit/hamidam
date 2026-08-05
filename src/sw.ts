@@ -28,16 +28,22 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const url = (event.notification.data?.url as string) ?? '/'
+  const targetUrl = new URL(url, self.location.origin).href
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if ('focus' in client) {
-          client.navigate(url)
-          return client.focus()
-        }
+    (async () => {
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const client = clients.find((c): c is WindowClient => 'focus' in c)
+
+      if (client) {
+        // client.navigate()는 iOS Safari/WebKit에서 신뢰성이 낮아, 페이지 쪽에서
+        // postMessage를 받아 react-router로 직접 이동하도록 위임한다.
+        client.postMessage({ type: 'navigate', url })
+        await client.focus()
+        return
       }
-      return self.clients.openWindow(url)
-    }),
+
+      await self.clients.openWindow(targetUrl)
+    })(),
   )
 })
