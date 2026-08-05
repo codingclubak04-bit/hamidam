@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { BgmProvider } from './context/BgmContext'
 import { PushNavigationListener } from './components/PushNavigationListener'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import Login from './routes/Login'
 import Setup from './routes/Setup'
 import SignupSalesRep from './routes/SignupSalesRep'
@@ -32,6 +33,7 @@ function App() {
         <AuthProvider>
           <BgmProvider>
             <PushNavigationListener />
+            <UpdatePrompt />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/setup" element={<Setup />} />
