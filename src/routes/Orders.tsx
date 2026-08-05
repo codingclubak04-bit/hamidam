@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { PageHeader } from '../components/PageHeader'
+import { useAuth } from '../context/AuthContext'
 import type { OrderStatus } from '../lib/types'
 
 const statusLabel: Record<OrderStatus, string> = {
@@ -32,11 +33,23 @@ interface OrderRow {
 
 export default function Orders() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [search, setSearch] = useState('')
+  const [orgName, setOrgName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (profile?.role !== 'org_admin' || !profile.organization_id) return
+    supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', profile.organization_id)
+      .maybeSingle()
+      .then(({ data }) => setOrgName(data?.name ?? null))
+  }, [profile])
 
   useEffect(() => {
     const load = async () => {
@@ -78,7 +91,9 @@ export default function Orders() {
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
       <PageHeader />
       <div className="mx-auto max-w-3xl md:max-w-4xl lg:max-w-5xl">
-        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">주문 목록</h1>
+        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">
+          {orgName ? `${orgName} 주문 목록` : '주문 목록'}
+        </h1>
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row">
           <input

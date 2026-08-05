@@ -3,10 +3,12 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from './MoonMark'
 import { ThemeToggle } from './ThemeToggle'
-import { IconBox, IconBuilding, IconChevronRight, IconHome, IconKey, IconLogout, IconUsers } from './DashboardIcons'
+import { HeaderMenu } from './HeaderMenu'
+import { IconBox, IconBuilding, IconChart, IconChevronRight, IconHome, IconKey, IconUsers } from './DashboardIcons'
 
 interface AdminShellProps {
   title: string
+  titleFont?: 'serif' | 'sans'
   children: ReactNode
 }
 
@@ -15,11 +17,12 @@ const navItems = [
   { to: '/admin/products', label: '상품 관리', icon: IconBox },
   { to: '/admin/partners', label: '파트너사 관리', icon: IconBuilding },
   { to: '/admin/sales-reps', label: '팀장 관리', icon: IconUsers },
+  { to: '/admin/stats', label: '주문 통계', icon: IconChart },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed'
 
-export function AdminShell({ title, children }: AdminShellProps) {
+export function AdminShell({ title, titleFont = 'serif', children }: AdminShellProps) {
   const { pathname } = useLocation()
   const { signOut } = useAuth()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1')
@@ -124,28 +127,13 @@ export function AdminShell({ title, children }: AdminShellProps) {
             <span className="truncate text-sm font-semibold text-foreground">슈퍼관리자 콘솔</span>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          <Link
-            to="/"
-            title="메인 대시보드로"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground/70 transition hover:bg-input hover:text-accent"
-          >
-            <IconHome className="h-[18px] w-[18px]" />
-          </Link>
-          <ThemeToggle inline />
-          <button
-            type="button"
-            onClick={signOut}
-            title="로그아웃"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground/70 transition hover:bg-input hover:text-accent"
-          >
-            <IconLogout className="h-[18px] w-[18px]" />
-          </button>
-        </div>
+        <HeaderMenu links={[{ to: '/', label: '메인 대시보드로' }]} onSignOut={signOut} showBgm={false} />
       </header>
 
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">{title}</h1>
+        <h1 className={'mb-6 text-2xl font-bold text-foreground ' + (titleFont === 'sans' ? 'font-sans-kr' : 'font-serif-kr')}>
+          {title}
+        </h1>
         <div className="space-y-6">{children}</div>
       </div>
     </div>

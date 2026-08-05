@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminShell } from '../components/AdminShell'
-import { IconBox, IconBuilding, IconChevronRight, IconKey, IconUsers } from '../components/DashboardIcons'
+import { IconBox, IconBuilding, IconChart, IconChevronRight, IconKey, IconUsers } from '../components/DashboardIcons'
 
 export default function AdminHome() {
   return (
@@ -18,6 +18,9 @@ export default function AdminHome() {
         </ConsoleRow>
         <ConsoleRow to="/admin/sales-reps" icon={<IconUsers className="h-[18px] w-[18px]" />} title="팀장 관리">
           팀장 전체 판매 현황 열람 권한 관리
+        </ConsoleRow>
+        <ConsoleRow to="/admin/stats" icon={<IconChart className="h-[18px] w-[18px]" />} title="주문/판매 통계">
+          주문 현황, 매출, 조직·팀장·상품별 판매 통계
         </ConsoleRow>
       </div>
     </AdminShell>

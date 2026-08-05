@@ -104,6 +104,15 @@ export function IconHome({ className }: IconProps) {
   )
 }
 
+export function IconChart({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 20V10M12 20V4M20 20v-7" />
+      <path d="M3 20h18" />
+    </svg>
+  )
+}
+
 export function IconLogout({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

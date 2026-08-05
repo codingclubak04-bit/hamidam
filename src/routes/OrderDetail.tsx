@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { MoonMark } from '../components/MoonMark'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { PageHeader } from '../components/PageHeader'
 import { Select } from '../components/Select'
 import { Modal } from '../components/Modal'
 import { EngravePreview, type EngraveElement, type EngravePhoto } from '../components/EngravePreview'
@@ -362,17 +361,9 @@ export default function OrderDetail() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
-      <ThemeToggle />
+      <PageHeader backTo={{ to: '/orders', label: '주문 목록으로' }} />
       <div className="mx-auto max-w-2xl lg:max-w-4xl xl:max-w-5xl">
-        <div className="mb-6 flex items-center gap-3">
-          <MoonMark className="h-9 w-9" />
-          <div>
-            <Link to="/orders" className="text-base text-muted-foreground hover:text-accent hover:underline">
-              ← 주문 목록으로
-            </Link>
-            <h1 className="font-serif-kr text-2xl font-bold text-foreground">주문 상세</h1>
-          </div>
-        </div>
+        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">주문 상세</h1>
 
         {loading && <p className="text-base text-muted-foreground">불러오는 중...</p>}
         {error && <p className="text-base text-destructive">{error}</p>}

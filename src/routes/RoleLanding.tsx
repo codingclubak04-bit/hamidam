@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from '../components/MoonMark'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { HeaderMenu } from '../components/HeaderMenu'
 import { SplashIntro } from '../components/SplashIntro'
 import { NotificationBanner } from '../components/NotificationBanner'
+import { InstallPrompt } from '../components/InstallPrompt'
 import {
   IconBox,
   IconChevronRight,
@@ -62,22 +64,19 @@ export default function RoleLanding() {
   return (
     <>
       {showSplash && <SplashIntro onDone={dismissSplash} />}
+      <InstallPrompt />
       <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-8">
         <header className="sticky top-0 z-40 -mx-4 -mt-8 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur">
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowSplash(true)}
+            title="인사말 다시보기"
+            className="flex items-center gap-2 rounded-full transition hover:opacity-80"
+          >
             <MoonMark className="h-7 w-7" />
             <span className="font-serif-kr text-base font-bold text-foreground">하미담</span>
-          </div>
-          <div className="flex items-center gap-0.5">
-            <ThemeToggle inline />
-            <button
-              type="button"
-              onClick={signOut}
-              className="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-input hover:text-accent"
-            >
-              로그아웃
-            </button>
-          </div>
+          </button>
+          <HeaderMenu onSignOut={signOut} />
         </header>
 
         <div className="mx-auto max-w-xl">
@@ -124,9 +123,13 @@ export default function RoleLanding() {
           </div>
 
           {profile.role === 'sales_rep' && profile.can_view_all_stats && (
-            <p className="mt-4 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">
-              전체 판매 현황 열람 권한이 있습니다 (통계 화면은 준비 중입니다).
-            </p>
+            <Link
+              to="/stats"
+              className="mt-4 flex items-center justify-between rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent transition-colors hover:bg-accent/15"
+            >
+              전체 판매 현황 열람하기
+              <IconChevronRight className="h-4 w-4" />
+            </Link>
           )}
         </div>
       </div>
