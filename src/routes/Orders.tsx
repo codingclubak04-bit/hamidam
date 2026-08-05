@@ -73,6 +73,15 @@ export default function Orders() {
       setLoading(false)
     }
     load()
+
+    const channel = supabase
+      .channel('orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => load())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const filtered = useMemo(() => {
