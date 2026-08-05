@@ -5,6 +5,7 @@ export function NotificationBanner({ profileId }: { profileId: string }) {
   const [visible, setVisible] = useState(false)
   const [requesting, setRequesting] = useState(false)
   const [deniedMessage, setDeniedMessage] = useState(false)
+  const [saveErrorMessage, setSaveErrorMessage] = useState(false)
 
   useEffect(() => {
     if (!isPushSupported()) return
@@ -25,6 +26,8 @@ export function NotificationBanner({ profileId }: { profileId: string }) {
       setVisible(false)
     } else if (result === 'denied') {
       setDeniedMessage(true)
+    } else if (result === 'error') {
+      setSaveErrorMessage(true)
     }
   }
 
@@ -35,6 +38,11 @@ export function NotificationBanner({ profileId }: { profileId: string }) {
         {deniedMessage && (
           <p className="mt-1 text-xs text-muted-foreground">
             브라우저 알림 권한이 거부되어 있습니다. 기기 설정에서 알림 권한을 허용한 뒤 다시 시도해주세요.
+          </p>
+        )}
+        {saveErrorMessage && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            알림 저장에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.
           </p>
         )}
       </div>

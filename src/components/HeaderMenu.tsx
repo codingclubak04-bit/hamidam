@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BgmToggleButton } from './BgmToggleButton'
 import { ThemeToggle } from './ThemeToggle'
+import { NotificationToggleButton } from './NotificationToggleButton'
 import { openInstallPrompt } from './InstallPrompt'
 
 interface HeaderMenuLink {
@@ -63,6 +64,7 @@ export function HeaderMenu({ onSignOut, links = [], showBgm = true }: HeaderMenu
             다크 모드
             <ThemeToggle inline />
           </div>
+          <NotificationToggleButton />
           <button
             type="button"
             onClick={() => {
