@@ -8,11 +8,6 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISSED_KEY = 'hamidam-install-dismissed'
 const SHOW_DELAY_MS = 3000
-const SHOW_EVENT = 'hamidam:show-install-prompt'
-
-export function openInstallPrompt() {
-  window.dispatchEvent(new Event(SHOW_EVENT))
-}
 
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -51,13 +46,9 @@ export function InstallPrompt() {
     }
     window.addEventListener('appinstalled', onInstalled)
 
-    const onForceShow = () => setVisible(true)
-    window.addEventListener(SHOW_EVENT, onForceShow)
-
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onInstalled)
-      window.removeEventListener(SHOW_EVENT, onForceShow)
       if (timer) clearTimeout(timer)
     }
   }, [])

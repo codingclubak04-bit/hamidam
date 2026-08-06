@@ -2,9 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from './MoonMark'
-import { ThemeToggle } from './ThemeToggle'
 import { HeaderMenu } from './HeaderMenu'
-import { IconBox, IconBuilding, IconChart, IconChevronRight, IconHome, IconKey, IconUsers } from './DashboardIcons'
+import { IconBox, IconBuilding, IconChart, IconChevronRight, IconHome, IconKey, IconMegaphone, IconUsers } from './DashboardIcons'
 
 interface AdminShellProps {
   title: string
@@ -18,6 +17,7 @@ const navItems = [
   { to: '/admin/partners', label: '파트너사 관리', icon: IconBuilding },
   { to: '/admin/sales-reps', label: '팀장 관리', icon: IconUsers },
   { to: '/admin/stats', label: '주문 통계', icon: IconChart },
+  { to: '/admin/notices', label: '공지사항 관리', icon: IconMegaphone },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed'
@@ -38,10 +38,6 @@ export function AdminShell({ title, titleFont = 'serif', children }: AdminShellP
         (collapsed ? 'lg:pl-28' : 'lg:pl-72')
       }
     >
-      <div className="hidden lg:block">
-        <ThemeToggle />
-      </div>
-
       <aside
         className={
           'fixed inset-y-0 left-0 hidden flex-col border-r border-border bg-surface/80 backdrop-blur transition-[width] duration-200 lg:flex ' +
@@ -112,7 +108,7 @@ export function AdminShell({ title, titleFont = 'serif', children }: AdminShellP
         </button>
       </aside>
 
-      <header className="sticky top-0 z-40 -mx-4 -mt-10 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-40 -mx-4 -mt-10 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur">
         <div className="flex min-w-0 items-center gap-2">
           <MoonMark className="h-7 w-7 shrink-0" />
           {pathname !== '/admin' ? (

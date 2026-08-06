@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from '../components/MoonMark'
@@ -12,15 +12,31 @@ import {
   IconChevronRight,
   IconGallery,
   IconList,
+  IconMegaphone,
   IconOrder,
   IconShield,
 } from '../components/DashboardIcons'
+import { supabase } from '../lib/supabase'
+import { getNoticesLastViewed, isNoticeUnread } from '../lib/notices'
 
 const SPLASH_SEEN_KEY = 'hamidam-splash-shown'
 
 export default function RoleLanding() {
   const { profile, signOut } = useAuth()
   const [showSplash, setShowSplash] = useState(() => !sessionStorage.getItem(SPLASH_SEEN_KEY))
+  const [hasUnreadNotice, setHasUnreadNotice] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('notices')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setHasUnreadNotice(isNoticeUnread(data.created_at, getNoticesLastViewed()))
+      })
+  }, [])
 
   const dismissSplash = () => {
     sessionStorage.setItem(SPLASH_SEEN_KEY, '1')
@@ -109,6 +125,9 @@ export default function RoleLanding() {
           </div>
 
           <div className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface/70 backdrop-blur">
+            <MenuRow to="/notices" icon={<IconMegaphone className="h-[18px] w-[18px]" />} showUnreadDot={hasUnreadNotice}>
+              공지사항
+            </MenuRow>
             <MenuRow to="/orders" icon={<IconList className="h-[18px] w-[18px]" />}>
               주문 목록 보기
             </MenuRow>
@@ -137,11 +156,24 @@ export default function RoleLanding() {
   )
 }
 
-function MenuRow({ to, icon, children }: { to: string; icon: ReactNode; children: ReactNode }) {
+function MenuRow({
+  to,
+  icon,
+  children,
+  showUnreadDot,
+}: {
+  to: string
+  icon: ReactNode
+  children: ReactNode
+  showUnreadDot?: boolean
+}) {
   return (
     <Link to={to} className="group flex items-center gap-3 px-5 py-4 text-base text-foreground transition-colors hover:bg-input">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
         {icon}
+        {showUnreadDot && (
+          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-surface" />
+        )}
       </span>
       <span className="flex-1">{children}</span>
       <IconChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-accent" />

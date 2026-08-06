@@ -35,20 +35,32 @@ export function SplashIntro({ onDone }: { onDone: () => void }) {
       </div>
       <div className="max-w-sm font-serif-kr text-lg leading-relaxed text-foreground">
         <span
-          className="block opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
+          className="block whitespace-nowrap opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
           style={{ animationDelay: '0.5s' }}
         >
-          달빛은 길을 비춰주는 따뜻한 위로의 빛입니다.
+          달빛은 길을 비춰주는
         </span>
         <span
-          className="block opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
-          style={{ animationDelay: '0.75s' }}
+          className="block whitespace-nowrap opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
+          style={{ animationDelay: '0.65s' }}
         >
-          그 빛처럼 하미담은 소중한 기억과 마음을
+          따뜻한 위로의 빛입니다.
         </span>
         <span
-          className="block opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
-          style={{ animationDelay: '1s' }}
+          className="block whitespace-nowrap opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
+          style={{ animationDelay: '0.8s' }}
+        >
+          그 빛처럼 하미담은
+        </span>
+        <span
+          className="block whitespace-nowrap opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
+          style={{ animationDelay: '0.95s' }}
+        >
+          소중한 기억과 마음을
+        </span>
+        <span
+          className="block whitespace-nowrap opacity-0 animate-[hamidam-fade-up_0.9s_ease-out_forwards]"
+          style={{ animationDelay: '1.1s' }}
         >
           정성으로 담아 전합니다.
         </span>

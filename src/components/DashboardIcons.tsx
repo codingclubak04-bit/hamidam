@@ -113,6 +113,15 @@ export function IconChart({ className }: IconProps) {
   )
 }
 
+export function IconMegaphone({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M3 11v2a2 2 0 002 2h1l2 5h2l-1.5-5H11l7 4V6l-7 4H6a2 2 0 00-2 2z" />
+      <path d="M11 7v10" />
+    </svg>
+  )
+}
+
 export function IconLogout({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

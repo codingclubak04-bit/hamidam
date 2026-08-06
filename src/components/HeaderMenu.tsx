@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { BgmToggleButton } from './BgmToggleButton'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationToggleButton } from './NotificationToggleButton'
-import { openInstallPrompt } from './InstallPrompt'
 
 interface HeaderMenuLink {
   to: string
@@ -65,16 +64,6 @@ export function HeaderMenu({ onSignOut, links = [], showBgm = true }: HeaderMenu
             <ThemeToggle inline />
           </div>
           <NotificationToggleButton />
-          <button
-            type="button"
-            onClick={() => {
-              openInstallPrompt()
-              setOpen(false)
-            }}
-            className="block w-full px-4 py-2.5 text-left text-sm text-foreground transition hover:bg-input"
-          >
-            홈 화면 설치 안내 다시 보기
-          </button>
           {onSignOut && (
             <button
               type="button"

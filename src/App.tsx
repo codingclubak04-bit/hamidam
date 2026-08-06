@@ -25,6 +25,9 @@ import ProductDetail from './routes/ProductDetail'
 import OrderNew from './routes/OrderNew'
 import Orders from './routes/Orders'
 import OrderDetail from './routes/OrderDetail'
+import Notices from './routes/Notices'
+import NoticeDetail from './routes/NoticeDetail'
+import AdminNotices from './routes/AdminNotices'
 
 function App() {
   return (
@@ -48,6 +51,8 @@ function App() {
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/stats" element={<Stats />} />
+                <Route path="/notices" element={<Notices />} />
+                <Route path="/notices/:id" element={<NoticeDetail />} />
                 <Route element={<SuperAdminRoute />}>
                   <Route path="/admin" element={<AdminHome />} />
                   <Route path="/admin/accounts" element={<AdminAccounts />} />
@@ -57,6 +62,7 @@ function App() {
                   <Route path="/admin/partners" element={<AdminPartners />} />
                   <Route path="/admin/sales-reps" element={<AdminSalesReps />} />
                   <Route path="/admin/stats" element={<AdminStats />} />
+                  <Route path="/admin/notices" element={<AdminNotices />} />
                 </Route>
               </Route>
             </Routes>

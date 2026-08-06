@@ -58,6 +58,16 @@ export interface Organization {
 
 export type OrderStatus = 'received' | 'processing' | 'completed' | 'cancelled'
 
+export interface Notice {
+  id: string
+  title: string
+  content: string
+  is_pinned: boolean
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 export const ENGRAVE_FONTS = [
   { value: 'Noto Serif KR', label: '본고딕 세리프 (Noto Serif KR)' },
   { value: 'Nanum Myeongjo', label: '나눔명조' },
