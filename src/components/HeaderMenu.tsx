@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { BgmToggleButton } from './BgmToggleButton'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationToggleButton } from './NotificationToggleButton'
+import { useInstallPrompt } from '../context/InstallPromptContext'
 
 interface HeaderMenuLink {
   to: string
@@ -18,6 +19,7 @@ interface HeaderMenuProps {
 export function HeaderMenu({ onSignOut, links = [], showBgm = true }: HeaderMenuProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const { platform, isStandalone, show: showInstallPrompt } = useInstallPrompt()
 
   useEffect(() => {
     if (!open) return
@@ -53,6 +55,18 @@ export function HeaderMenu({ onSignOut, links = [], showBgm = true }: HeaderMenu
               {link.label}
             </Link>
           ))}
+          {!isStandalone && platform && (
+            <button
+              type="button"
+              onClick={() => {
+                showInstallPrompt()
+                setOpen(false)
+              }}
+              className="block w-full px-4 py-2.5 text-left text-sm text-foreground transition hover:bg-input"
+            >
+              홈 화면에 설치
+            </button>
+          )}
           {showBgm && (
             <div className="flex items-center justify-between px-4 py-2.5 text-sm text-foreground">
               배경음악

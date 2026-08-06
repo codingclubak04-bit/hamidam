@@ -1,19 +1,29 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MoonMark } from './MoonMark'
 import { useBgm } from '../context/BgmContext'
 
 export function SplashIntro({ onDone }: { onDone: () => void }) {
   const { play: playBgm } = useBgm()
+  const narrationRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const narration = new Audio('/audio/narration-female.wav')
+    narrationRef.current = narration
     narration.play().catch(() => {})
     playBgm()
     return () => narration.pause()
   }, [playBgm])
 
+  const resumeAudioIfBlocked = () => {
+    narrationRef.current?.play().catch(() => {})
+    playBgm()
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[radial-gradient(120%_100%_at_50%_20%,_var(--color-background-alt)_0%,_var(--color-background)_65%)] px-6 text-center">
+    <div
+      onPointerDown={resumeAudioIfBlocked}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[radial-gradient(120%_100%_at_50%_20%,_var(--color-background-alt)_0%,_var(--color-background)_65%)] px-6 text-center"
+    >
       <div className="relative flex h-20 w-20 items-center justify-center">
         <div
           className="absolute h-28 w-28 rounded-full opacity-0 blur-2xl animate-[hamidam-glow-pulse_3.2s_ease-in-out_infinite]"

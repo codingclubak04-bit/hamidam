@@ -424,23 +424,25 @@ export default function OrderStats() {
             <span className="text-sm text-muted-foreground">{previousPeriodLabel[period]} 대비</span>
           )}
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="col-span-2 rounded-2xl border border-accent/40 bg-surface/80 p-5 text-center backdrop-blur sm:col-span-1">
-            <span className="inline-block rounded-full bg-accent/15 px-2.5 py-1 text-sm font-medium text-accent">
-              매출
-            </span>
-            <p className="mt-2 whitespace-nowrap text-xl font-bold text-foreground">{formatWon(revenue)}</p>
-            <TrendBadge trend={trendPercent(revenue, previousRevenue)} />
-          </div>
-          {(Object.keys(statusLabel) as OrderStatus[]).map((s) => (
-            <div key={s} className="rounded-2xl border border-border bg-surface/80 p-5 text-center backdrop-blur">
-              <span className={`inline-block rounded-full px-2.5 py-1 text-sm font-medium ${statusBadgeClass[s]}`}>
-                {statusLabel[s]}
+        <div className="mt-3 @container">
+          <div className="grid grid-cols-2 gap-3 @sm:grid-cols-3 @4xl:grid-cols-5">
+            <div className="col-span-2 rounded-2xl border border-accent/40 bg-surface/80 p-5 text-center backdrop-blur @sm:col-span-1">
+              <span className="inline-block rounded-full bg-accent/15 px-2.5 py-1 text-sm font-medium text-accent">
+                매출
               </span>
-              <p className="mt-2 text-2xl font-bold text-foreground">{statusCounts[s]}건</p>
-              <TrendBadge trend={trendCount(statusCounts[s], previousStatusCounts?.[s] ?? null)} />
+              <p className="mt-2 text-xl font-bold text-foreground">{formatWon(revenue)}</p>
+              <TrendBadge trend={trendPercent(revenue, previousRevenue)} />
             </div>
-          ))}
+            {(Object.keys(statusLabel) as OrderStatus[]).map((s) => (
+              <div key={s} className="rounded-2xl border border-border bg-surface/80 p-5 text-center backdrop-blur">
+                <span className={`inline-block rounded-full px-2.5 py-1 text-sm font-medium ${statusBadgeClass[s]}`}>
+                  {statusLabel[s]}
+                </span>
+                <p className="mt-2 text-2xl font-bold text-foreground">{statusCounts[s]}건</p>
+                <TrendBadge trend={trendCount(statusCounts[s], previousStatusCounts?.[s] ?? null)} />
+              </div>
+            ))}
+          </div>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">취소 건은 매출 집계에서 제외됩니다.</p>
       </div>

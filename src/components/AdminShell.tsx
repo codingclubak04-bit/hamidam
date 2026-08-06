@@ -108,8 +108,8 @@ export function AdminShell({ title, titleFont = 'serif', children }: AdminShellP
         </button>
       </aside>
 
-      <header className="sticky top-0 z-40 -mx-4 -mt-10 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur">
-        <div className="flex min-w-0 items-center gap-2">
+      <header className="sticky top-0 z-40 -mx-4 -mt-10 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur lg:justify-end">
+        <div className="flex min-w-0 items-center gap-2 lg:hidden">
           <MoonMark className="h-7 w-7 shrink-0" />
           {pathname !== '/admin' ? (
             <Link

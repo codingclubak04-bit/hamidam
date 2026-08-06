@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, type Location } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Field } from '../components/Field'
 import { AuthLayout } from '../components/AuthLayout'
@@ -10,6 +10,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -21,7 +22,8 @@ export default function Login() {
       setError('로그인에 실패했습니다: ' + error.message)
       return
     }
-    navigate('/')
+    const from = (location.state as { from?: Location } | null)?.from
+    navigate(from ? from.pathname + from.search : '/', { replace: true })
   }
 
   return (

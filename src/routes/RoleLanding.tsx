@@ -6,7 +6,6 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import { HeaderMenu } from '../components/HeaderMenu'
 import { SplashIntro } from '../components/SplashIntro'
 import { NotificationBanner } from '../components/NotificationBanner'
-import { InstallPrompt } from '../components/InstallPrompt'
 import {
   IconBox,
   IconChevronRight,
@@ -80,7 +79,6 @@ export default function RoleLanding() {
   return (
     <>
       {showSplash && <SplashIntro onDone={dismissSplash} />}
-      <InstallPrompt />
       <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-8">
         <header className="sticky top-0 z-40 -mx-4 -mt-8 mb-6 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur">
           <button

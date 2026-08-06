@@ -1,73 +1,8 @@
-import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-const DISMISSED_KEY = 'hamidam-install-dismissed'
-const SHOW_DELAY_MS = 3000
+import { useInstallPrompt } from '../context/InstallPromptContext'
 
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [platform, setPlatform] = useState<'android' | 'ios' | null>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true
-
-    const isDismissed = () => !!localStorage.getItem(DISMISSED_KEY)
-
-    let timer: ReturnType<typeof setTimeout> | undefined
-
-    const onBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setPlatform('android')
-      if (!isDismissed() && !isStandalone) {
-        timer = setTimeout(() => setVisible(true), SHOW_DELAY_MS)
-      }
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
-
-    if (/iphone|ipad|ipod/i.test(window.navigator.userAgent)) {
-      setPlatform('ios')
-      if (!isDismissed() && !isStandalone) {
-        timer = setTimeout(() => setVisible(true), SHOW_DELAY_MS)
-      }
-    }
-
-    const onInstalled = () => {
-      localStorage.setItem(DISMISSED_KEY, '1')
-      setVisible(false)
-    }
-    window.addEventListener('appinstalled', onInstalled)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', onInstalled)
-      if (timer) clearTimeout(timer)
-    }
-  }, [])
-
-  const dismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, '1')
-    setVisible(false)
-  }
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return
-    await deferredPrompt.prompt()
-    const choice = await deferredPrompt.userChoice
-    if (choice.outcome === 'accepted') {
-      localStorage.setItem(DISMISSED_KEY, '1')
-    }
-    setDeferredPrompt(null)
-    setVisible(false)
-  }
+  const { platform, visible, dismiss, install } = useInstallPrompt()
 
   if (!visible || !platform) return null
 
@@ -94,7 +29,7 @@ export function InstallPrompt() {
         {platform === 'android' ? (
           <button
             type="button"
-            onClick={handleInstall}
+            onClick={install}
             className="mt-3 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:brightness-105"
           >
             홈 화면에 추가

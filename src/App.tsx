@@ -2,8 +2,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { BgmProvider } from './context/BgmContext'
+import { InstallPromptProvider } from './context/InstallPromptContext'
 import { PushNavigationListener } from './components/PushNavigationListener'
 import { UpdatePrompt } from './components/UpdatePrompt'
+import { InstallPrompt } from './components/InstallPrompt'
 import Login from './routes/Login'
 import Setup from './routes/Setup'
 import SignupSalesRep from './routes/SignupSalesRep'
@@ -35,37 +37,40 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <BgmProvider>
-            <PushNavigationListener />
-            <UpdatePrompt />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/setup" element={<Setup />} />
-              <Route path="/signup/sales-rep" element={<SignupSalesRep />} />
-              <Route path="/signup/partner" element={<SignupPartner />} />
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<RoleLanding />} />
-                <Route path="/gallery" element={<Gallery />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/:id" element={<ProductDetail />} />
-                <Route path="/orders/new" element={<OrderNew />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/orders/:id" element={<OrderDetail />} />
-                <Route path="/stats" element={<Stats />} />
-                <Route path="/notices" element={<Notices />} />
-                <Route path="/notices/:id" element={<NoticeDetail />} />
-                <Route element={<SuperAdminRoute />}>
-                  <Route path="/admin" element={<AdminHome />} />
-                  <Route path="/admin/accounts" element={<AdminAccounts />} />
-                  <Route path="/admin/products" element={<AdminProducts />} />
-                  <Route path="/admin/products/new" element={<AdminProductForm />} />
-                  <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
-                  <Route path="/admin/partners" element={<AdminPartners />} />
-                  <Route path="/admin/sales-reps" element={<AdminSalesReps />} />
-                  <Route path="/admin/stats" element={<AdminStats />} />
-                  <Route path="/admin/notices" element={<AdminNotices />} />
+            <InstallPromptProvider>
+              <PushNavigationListener />
+              <UpdatePrompt />
+              <InstallPrompt />
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/setup" element={<Setup />} />
+                <Route path="/signup/sales-rep" element={<SignupSalesRep />} />
+                <Route path="/signup/partner" element={<SignupPartner />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/" element={<RoleLanding />} />
+                  <Route path="/gallery" element={<Gallery />} />
+                  <Route path="/products" element={<Products />} />
+                  <Route path="/products/:id" element={<ProductDetail />} />
+                  <Route path="/orders/new" element={<OrderNew />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/orders/:id" element={<OrderDetail />} />
+                  <Route path="/stats" element={<Stats />} />
+                  <Route path="/notices" element={<Notices />} />
+                  <Route path="/notices/:id" element={<NoticeDetail />} />
+                  <Route element={<SuperAdminRoute />}>
+                    <Route path="/admin" element={<AdminHome />} />
+                    <Route path="/admin/accounts" element={<AdminAccounts />} />
+                    <Route path="/admin/products" element={<AdminProducts />} />
+                    <Route path="/admin/products/new" element={<AdminProductForm />} />
+                    <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
+                    <Route path="/admin/partners" element={<AdminPartners />} />
+                    <Route path="/admin/sales-reps" element={<AdminSalesReps />} />
+                    <Route path="/admin/stats" element={<AdminStats />} />
+                    <Route path="/admin/notices" element={<AdminNotices />} />
+                  </Route>
                 </Route>
-              </Route>
-            </Routes>
+              </Routes>
+            </InstallPromptProvider>
           </BgmProvider>
         </AuthProvider>
       </BrowserRouter>
