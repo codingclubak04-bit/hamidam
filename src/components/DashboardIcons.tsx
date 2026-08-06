@@ -122,6 +122,17 @@ export function IconMegaphone({ className }: IconProps) {
   )
 }
 
+export function IconQrCode({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z" />
+    </svg>
+  )
+}
+
 export function IconLogout({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

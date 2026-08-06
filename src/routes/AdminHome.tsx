@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminShell } from '../components/AdminShell'
-import { IconBox, IconBuilding, IconChart, IconChevronRight, IconKey, IconUsers } from '../components/DashboardIcons'
+import { IconBox, IconBuilding, IconChart, IconChevronRight, IconKey, IconQrCode, IconUsers } from '../components/DashboardIcons'
 
 export default function AdminHome() {
   return (
@@ -21,6 +21,9 @@ export default function AdminHome() {
         </ConsoleRow>
         <ConsoleRow to="/admin/stats" icon={<IconChart className="h-[18px] w-[18px]" />} title="주문/판매 통계">
           주문 현황, 매출, 조직·팀장·상품별 판매 통계
+        </ConsoleRow>
+        <ConsoleRow to="/admin/invite" icon={<IconQrCode className="h-[18px] w-[18px]" />} title="영업사원 초대 QR">
+          QR코드로 영업사원 회원가입 페이지 안내 및 앱 설치 유도
         </ConsoleRow>
       </div>
     </AdminShell>

@@ -30,6 +30,7 @@ import OrderDetail from './routes/OrderDetail'
 import Notices from './routes/Notices'
 import NoticeDetail from './routes/NoticeDetail'
 import AdminNotices from './routes/AdminNotices'
+import AdminInvite from './routes/AdminInvite'
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
                     <Route path="/admin/sales-reps" element={<AdminSalesReps />} />
                     <Route path="/admin/stats" element={<AdminStats />} />
                     <Route path="/admin/notices" element={<AdminNotices />} />
+                    <Route path="/admin/invite" element={<AdminInvite />} />
                   </Route>
                 </Route>
               </Routes>

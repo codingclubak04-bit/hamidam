@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { MoonMark } from './MoonMark'
 import { HeaderMenu } from './HeaderMenu'
-import { IconBox, IconBuilding, IconChart, IconChevronRight, IconHome, IconKey, IconMegaphone, IconUsers } from './DashboardIcons'
+import { IconBox, IconBuilding, IconChart, IconChevronRight, IconHome, IconKey, IconMegaphone, IconQrCode, IconUsers } from './DashboardIcons'
 
 interface AdminShellProps {
   title: string
@@ -18,6 +18,7 @@ const navItems = [
   { to: '/admin/sales-reps', label: '팀장 관리', icon: IconUsers },
   { to: '/admin/stats', label: '주문 통계', icon: IconChart },
   { to: '/admin/notices', label: '공지사항 관리', icon: IconMegaphone },
+  { to: '/admin/invite', label: '영업사원 초대 QR', icon: IconQrCode },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed'
