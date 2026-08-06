@@ -46,6 +46,7 @@ interface StatsOrderRow {
   sales_rep: { name: string; role: string } | null
   urn_product: { name: string } | null
   tablet_product: { name: string } | null
+  order_items: { product_name: string; unit_price: number; quantity: number }[]
 }
 
 function periodStart(period: Period): Date | null {
@@ -123,7 +124,8 @@ function TrendBadge({ trend }: { trend: Trend | null }) {
 }
 
 function orderAmount(o: StatsOrderRow) {
-  return (o.urn_price ?? 0) + (o.tablet_price ?? 0)
+  const itemsTotal = o.order_items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
+  return (o.urn_price ?? 0) + (o.tablet_price ?? 0) + itemsTotal
 }
 
 function formatWon(n: number) {
@@ -131,7 +133,9 @@ function formatWon(n: number) {
 }
 
 function productNames(o: StatsOrderRow) {
-  const names = [o.urn_product?.name, o.tablet_product?.name].filter(Boolean)
+  const names = [o.urn_product?.name, o.tablet_product?.name, ...o.order_items.map((i) => i.product_name)].filter(
+    Boolean,
+  )
   return names.length > 0 ? names.join(' · ') : '-'
 }
 
@@ -188,7 +192,8 @@ export default function OrderStats() {
            organization:organization_id(name),
            sales_rep:sales_rep_id(name, role),
            urn_product:urn_product_id(name),
-           tablet_product:tablet_product_id(name)`,
+           tablet_product:tablet_product_id(name),
+           order_items(product_name, unit_price, quantity)`,
         )
         .order('created_at', { ascending: false })
 

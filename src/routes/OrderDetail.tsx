@@ -119,6 +119,7 @@ interface OrderDetailData {
   } | null
   sales_rep: { name: string } | null
   organization: { name: string } | null
+  order_items: { id: string; product_name: string; unit_price: number; quantity: number }[]
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -167,6 +168,7 @@ export default function OrderDetail() {
            tablet_photo_url, tablet_photo_x_pct, tablet_photo_y_pct, tablet_photo_size_pct,
            urn_product:urn_product_id(name, image_url, engrave_x_pct, engrave_y_pct, engrave_font_pct, engrave_color, engrave_birth_x_pct, engrave_birth_y_pct, engrave_birth_font_pct, engrave_death_x_pct, engrave_death_y_pct, engrave_death_font_pct, engrave_religion_x_pct, engrave_religion_y_pct, engrave_religion_font_pct),
            tablet_product:tablet_product_id(name, image_url, engrave_x_pct, engrave_y_pct, engrave_font_pct, engrave_color, engrave_birth_x_pct, engrave_birth_y_pct, engrave_birth_font_pct, engrave_death_x_pct, engrave_death_y_pct, engrave_death_font_pct, engrave_religion_x_pct, engrave_religion_y_pct, engrave_religion_font_pct, engrave_photo_y_pct),
+           order_items(id, product_name, unit_price, quantity),
            sales_rep:sales_rep_id(name),
            organization:organization_id(name)`,
         )
@@ -207,6 +209,12 @@ export default function OrderDetail() {
     setSaving(false)
     setSaveSuccess(true)
   }
+
+  const totalAmount = useMemo(() => {
+    if (!order) return 0
+    const itemsTotal = order.order_items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
+    return (order.urn_price ?? 0) + (order.tablet_price ?? 0) + itemsTotal
+  }, [order])
 
   const urnElements: EngraveElement[] = useMemo(() => {
     if (!order?.urn_product || !order.deceased_name) return []
@@ -436,6 +444,14 @@ export default function OrderDetail() {
                   label="위패"
                   value={order.tablet_product ? `${order.tablet_product.name} (${order.tablet_price?.toLocaleString() ?? '-'}원)` : null}
                 />
+                {order.order_items.map((item) => (
+                  <Row
+                    key={item.id}
+                    label={item.product_name}
+                    value={`${item.quantity}개 (${(item.unit_price * item.quantity).toLocaleString()}원)`}
+                  />
+                ))}
+                <Row label="합계" value={`${totalAmount.toLocaleString()}원`} />
               </dl>
               {order.deceased_name && (order.urn_product || order.tablet_product) && (
                 <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2 lg:hidden">

@@ -58,6 +58,16 @@ export interface Organization {
 
 export type OrderStatus = 'received' | 'processing' | 'completed' | 'cancelled'
 
+export interface OrderItem {
+  id: string
+  order_id: string
+  product_id: string | null
+  product_name: string
+  unit_price: number
+  quantity: number
+  created_at: string
+}
+
 export interface Notice {
   id: string
   title: string

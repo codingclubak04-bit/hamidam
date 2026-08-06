@@ -19,7 +19,7 @@ interface HeaderMenuProps {
 export function HeaderMenu({ onSignOut, links = [], showBgm = true }: HeaderMenuProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const { platform, isStandalone, show: showInstallPrompt } = useInstallPrompt()
+  const { platform, isStandalone, show: showInstallPrompt, install } = useInstallPrompt()
 
   useEffect(() => {
     if (!open) return
@@ -59,12 +59,16 @@ export function HeaderMenu({ onSignOut, links = [], showBgm = true }: HeaderMenu
             <button
               type="button"
               onClick={() => {
-                showInstallPrompt()
+                if (platform === 'android') {
+                  install()
+                } else {
+                  showInstallPrompt()
+                }
                 setOpen(false)
               }}
               className="block w-full px-4 py-2.5 text-left text-sm text-foreground transition hover:bg-input"
             >
-              홈 화면에 설치
+              앱 설치
             </button>
           )}
           {showBgm && (

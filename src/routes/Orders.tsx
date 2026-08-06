@@ -27,6 +27,7 @@ interface OrderRow {
   created_at: string
   urn_product: { name: string } | null
   tablet_product: { name: string } | null
+  order_items: { product_name: string }[]
   sales_rep: { name: string } | null
   organization: { name: string } | null
 }
@@ -59,6 +60,7 @@ export default function Orders() {
           `id, status, deceased_name, customer_name, created_at,
            urn_product:urn_product_id(name),
            tablet_product:tablet_product_id(name),
+           order_items(product_name),
            sales_rep:sales_rep_id(name),
            organization:organization_id(name)`,
         )
@@ -149,6 +151,7 @@ export default function Orders() {
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     주문자 {o.customer_name} · {o.urn_product?.name ?? '유골함 미선택'}
                     {o.tablet_product && ` · ${o.tablet_product.name}`}
+                    {o.order_items.map((item) => ` · ${item.product_name}`)}
                   </p>
                   {(o.sales_rep || o.organization) && (
                     <p className="mt-0.5 text-sm text-muted-foreground">
@@ -196,6 +199,7 @@ export default function Orders() {
                   <td className="px-5 py-4 text-sm text-muted-foreground">
                     {o.customer_name} · {o.urn_product?.name ?? '유골함 미선택'}
                     {o.tablet_product && ` · ${o.tablet_product.name}`}
+                    {o.order_items.map((item) => ` · ${item.product_name}`)}
                   </td>
                   <td className="px-5 py-4 text-sm text-muted-foreground">
                     {o.organization?.name && `${o.organization.name} · `}

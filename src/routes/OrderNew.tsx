@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -8,8 +8,9 @@ import { PageHeader } from '../components/PageHeader'
 import { Field } from '../components/Field'
 import { Select } from '../components/Select'
 import { Modal } from '../components/Modal'
+import { IconChevronRight } from '../components/DashboardIcons'
 import { EngravePreview, type EngraveElement, type EngravePhoto } from '../components/EngravePreview'
-import { ENGRAVE_FONTS, DEFAULT_ENGRAVE_FONT, type Product } from '../lib/types'
+import { ENGRAVE_FONTS, DEFAULT_ENGRAVE_FONT, type Product, type ProductType } from '../lib/types'
 import {
   formatBirthEngrave,
   formatDeathEngrave,
@@ -291,28 +292,173 @@ const crematoriums = [
 ]
 const CUSTOM_CREMATORIUM = '직접입력'
 
-function ProductPicker({
-  label,
-  type,
+function CollapsibleSection({
+  title,
+  summary,
+  defaultOpen = true,
+  children,
+}: {
+  title: string
+  summary?: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="space-y-3 border-t border-border pt-4 first:border-t-0 first:pt-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3"
+      >
+        <span className="flex items-center gap-2">
+          <IconChevronRight
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`}
+          />
+          <span className="text-base font-semibold text-foreground">{title}</span>
+        </span>
+        {!open && summary && <span className="truncate text-sm text-muted-foreground">{summary}</span>}
+      </button>
+      {open && <div className="space-y-3 pl-6">{children}</div>}
+    </div>
+  )
+}
+
+const extraProductTypeLabel: Record<ProductType, string> = {
+  urn: '유골함',
+  tablet: '위패',
+  other: '기타',
+}
+
+interface CartItem {
+  product: Product
+  quantity: number
+}
+
+function ProductSearchGrid({
   products,
+  fixedType,
+  selectedIds = [],
+  onSelect,
+}: {
+  products: Product[]
+  fixedType?: ProductType
+  selectedIds?: string[]
+  onSelect: (product: Product) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | ProductType>('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+
+  const scoped = useMemo(
+    () => (fixedType ? products.filter((p) => p.type === fixedType) : products),
+    [products, fixedType],
+  )
+  const categories = useMemo(() => Array.from(new Set(scoped.map((p) => p.category))), [scoped])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return scoped.filter(
+      (p) =>
+        (fixedType || typeFilter === 'all' || p.type === typeFilter) &&
+        (categoryFilter === 'all' || p.category === categoryFilter) &&
+        (q === '' ||
+          p.name.toLowerCase().includes(q) ||
+          p.model_code.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q)),
+    )
+  }, [scoped, fixedType, typeFilter, categoryFilter, query])
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3">
+      <div className={`grid grid-cols-1 gap-2 ${fixedType ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="상품명, 모델코드로 검색"
+          className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        {!fixedType && (
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as 'all' | ProductType)}
+            className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+          >
+            <option value="all">전체 분류</option>
+            <option value="urn">유골함</option>
+            <option value="tablet">위패</option>
+            <option value="other">기타</option>
+          </select>
+        )}
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+        >
+          <option value="all">전체 카테고리</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="max-h-80 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {filtered.map((p) => (
+            <button
+              type="button"
+              key={p.id}
+              onClick={() => onSelect(p)}
+              className={`flex flex-col items-start gap-1 rounded-lg border p-2 text-left hover:border-accent ${
+                selectedIds.includes(p.id) ? 'border-accent bg-accent/10' : 'border-border'
+              }`}
+            >
+              <div className="aspect-square w-full overflow-hidden rounded bg-white">
+                {p.image_url ? (
+                  <img src={p.image_url} alt={p.name} className="h-full w-full object-contain" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                    사진 없음
+                  </div>
+                )}
+              </div>
+              <p className="line-clamp-2 text-sm font-medium text-foreground">{p.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {p.category} · {extraProductTypeLabel[p.type]}
+              </p>
+              <p className="text-sm text-accent">{p.price.toLocaleString()}원</p>
+            </button>
+          ))}
+        </div>
+        {filtered.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">조건에 맞는 상품이 없습니다.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SingleProductSection({
+  products,
+  type,
   selectedId,
   onSelect,
 }: {
-  label: string
-  type: 'urn' | 'tablet'
   products: Product[]
+  type: 'urn' | 'tablet'
   selectedId: string | null
   onSelect: (product: Product | null) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const items = useMemo(() => products.filter((p) => p.type === type), [products, type])
-  const selected = items.find((p) => p.id === selectedId) ?? null
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const selected = products.find((p) => p.id === selectedId) ?? null
 
-  return (
-    <div>
-      <label className="block text-base font-medium text-muted-foreground">{label}</label>
-      {selected ? (
-        <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-border bg-input px-4 py-3">
+  if (selected && !pickerOpen) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-input px-4 py-3">
           <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-white">
             {selected.image_url && (
               <img src={selected.image_url} alt={selected.name} className="h-full w-full object-contain" />
@@ -324,58 +470,95 @@ function ProductPicker({
           </div>
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => setPickerOpen(true)}
             className="shrink-0 text-sm text-accent underline"
           >
             변경
           </button>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="mt-1.5 w-full rounded-lg border border-dashed border-border px-4 py-3 text-base text-muted-foreground hover:border-accent hover:text-accent"
-        >
-          {label} 목록에서 고르기
+        <button type="button" onClick={() => onSelect(null)} className="text-sm text-muted-foreground underline">
+          선택 취소
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <ProductSearchGrid
+        products={products}
+        fixedType={type}
+        selectedIds={selectedId ? [selectedId] : []}
+        onSelect={(p) => {
+          onSelect(p)
+          setPickerOpen(false)
+        }}
+      />
+      {selected && (
+        <button type="button" onClick={() => setPickerOpen(false)} className="text-sm text-muted-foreground underline">
+          닫기
         </button>
       )}
+    </div>
+  )
+}
 
-      {open && (
-        <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border p-3">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {items.map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                onClick={() => {
-                  onSelect(p)
-                  setOpen(false)
-                }}
-                className="flex flex-col items-start gap-1 rounded-lg border border-border p-2 text-left hover:border-accent"
-              >
-                <div className="aspect-square w-full overflow-hidden rounded bg-white">
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="h-full w-full object-contain" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                      사진 없음
-                    </div>
-                  )}
-                </div>
-                <p className="line-clamp-2 text-sm font-medium text-foreground">{p.name}</p>
-                <p className="text-sm text-accent">{p.price.toLocaleString()}원</p>
-              </button>
-            ))}
+function ExtraItemsList({
+  items,
+  onChangeQuantity,
+  onRemove,
+}: {
+  items: CartItem[]
+  onChangeQuantity: (productId: string, quantity: number) => void
+  onRemove: (productId: string) => void
+}) {
+  if (items.length === 0) return null
+  const total = items.reduce((sum, it) => sum + it.product.price * it.quantity, 0)
+  return (
+    <div className="space-y-2">
+      {items.map((it) => (
+        <div
+          key={it.product.id}
+          className="flex items-center gap-3 rounded-lg border border-border bg-input px-4 py-3"
+        >
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-white">
+            {it.product.image_url && (
+              <img src={it.product.image_url} alt={it.product.name} className="h-full w-full object-contain" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{it.product.name}</p>
+            <p className="text-sm text-muted-foreground">{it.product.price.toLocaleString()}원</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onChangeQuantity(it.product.id, Math.max(1, it.quantity - 1))}
+              className="h-7 w-7 rounded-full border border-border text-muted-foreground hover:border-accent hover:text-accent"
+            >
+              −
+            </button>
+            <span className="w-6 text-center text-sm text-foreground">{it.quantity}</span>
+            <button
+              type="button"
+              onClick={() => onChangeQuantity(it.product.id, it.quantity + 1)}
+              className="h-7 w-7 rounded-full border border-border text-muted-foreground hover:border-accent hover:text-accent"
+            >
+              +
+            </button>
           </div>
           <button
             type="button"
-            onClick={() => setOpen(false)}
-            className="mt-3 text-sm text-muted-foreground underline"
+            onClick={() => onRemove(it.product.id)}
+            className="shrink-0 text-sm text-muted-foreground underline"
           >
-            닫기
+            삭제
           </button>
         </div>
-      )}
+      ))}
+      <p className="text-right text-base font-semibold text-foreground">
+        추가 상품 합계 {total.toLocaleString()}원
+      </p>
     </div>
   )
 }
@@ -387,6 +570,8 @@ export default function OrderNew() {
   const [products, setProducts] = useState<Product[]>([])
   const [urnId, setUrnId] = useState<string | null>(searchParams.get('urn'))
   const [tabletId, setTabletId] = useState<string | null>(searchParams.get('tablet'))
+  const [extraItems, setExtraItems] = useState<CartItem[]>([])
+  const [queryItemAdded, setQueryItemAdded] = useState(false)
 
   const [religion, setReligion] = useState<string>('')
   const [deceasedName, setDeceasedName] = useState('')
@@ -440,8 +625,38 @@ export default function OrderNew() {
     load()
   }, [])
 
+  useEffect(() => {
+    if (queryItemAdded || products.length === 0) return
+    const itemId = searchParams.get('item')
+    const product = itemId ? products.find((p) => p.id === itemId) : undefined
+    if (product) {
+      setExtraItems((prev) => [...prev, { product, quantity: 1 }])
+    }
+    setQueryItemAdded(true)
+  }, [products, queryItemAdded, searchParams])
+
+  const addExtraItem = (product: Product) => {
+    setExtraItems((prev) => {
+      const existing = prev.find((it) => it.product.id === product.id)
+      if (existing) {
+        return prev.map((it) => (it.product.id === product.id ? { ...it, quantity: it.quantity + 1 } : it))
+      }
+      return [...prev, { product, quantity: 1 }]
+    })
+  }
+  const changeExtraItemQuantity = (productId: string, quantity: number) => {
+    setExtraItems((prev) => prev.map((it) => (it.product.id === productId ? { ...it, quantity } : it)))
+  }
+  const removeExtraItem = (productId: string) => {
+    setExtraItems((prev) => prev.filter((it) => it.product.id !== productId))
+  }
+
   const urnProduct = products.find((p) => p.id === urnId) ?? null
   const tabletProduct = products.find((p) => p.id === tabletId) ?? null
+  const extraItemsTotal = useMemo(
+    () => extraItems.reduce((sum, it) => sum + it.product.price * it.quantity, 0),
+    [extraItems],
+  )
 
   const [urnEngrave, setUrnEngrave] = useState<EngraveOverride | null>(null)
   const [tabletEngrave, setTabletEngrave] = useState<EngraveOverride | null>(null)
@@ -527,7 +742,7 @@ export default function OrderNew() {
       tabletPhotoUrl = signedData.signedUrl
     }
 
-    const { error: insertError } = await supabase.from('orders').insert({
+    const { data: insertedOrder, error: insertError } = await supabase.from('orders').insert({
       sales_rep_id: profile.id,
       organization_id: profile.organization_id,
       urn_product_id: urnId,
@@ -580,13 +795,32 @@ export default function OrderNew() {
       customer_phone: customerPhone || null,
       has_special_notes: hasSpecialNotes,
       special_notes: hasSpecialNotes ? specialNotes : null,
-    })
+    }).select('id').single()
 
-    setSubmitting(false)
-    if (insertError) {
-      setError('주문서 저장 실패: ' + insertError.message)
+    if (insertError || !insertedOrder) {
+      setSubmitting(false)
+      setError('주문서 저장 실패: ' + (insertError?.message ?? ''))
       return
     }
+
+    if (extraItems.length > 0) {
+      const { error: itemsError } = await supabase.from('order_items').insert(
+        extraItems.map((it) => ({
+          order_id: insertedOrder.id,
+          product_id: it.product.id,
+          product_name: it.product.name,
+          unit_price: it.product.price,
+          quantity: it.quantity,
+        })),
+      )
+      if (itemsError) {
+        setSubmitting(false)
+        setError('추가 상품 저장 실패: ' + itemsError.message)
+        return
+      }
+    }
+
+    setSubmitting(false)
     setSuccess(true)
   }
 
@@ -623,63 +857,63 @@ export default function OrderNew() {
         <div className="space-y-8 rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
           <section className="space-y-4">
             <h2 className="font-serif-kr text-lg font-bold text-foreground">상품 선택</h2>
-            <ProductPicker
-              label="유골함 선택 (위패와 최소 1개 선택)"
-              type="urn"
-              products={products}
-              selectedId={urnId}
-              onSelect={(p) => setUrnId(p?.id ?? null)}
-            />
-            {urnId && (
-              <button
-                type="button"
-                onClick={() => setUrnId(null)}
-                className="text-sm text-muted-foreground underline"
-              >
-                유골함 선택 취소
-              </button>
-            )}
-            <ProductPicker
-              label="위패 선택 (유골함과 최소 1개 선택)"
-              type="tablet"
-              products={products}
-              selectedId={tabletId}
-              onSelect={(p) => setTabletId(p?.id ?? null)}
-            />
-            {tabletId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setTabletId(null)
-                  setTabletPhotoFile(null)
+
+            <CollapsibleSection title="유골함" summary={urnProduct ? urnProduct.name : '미선택'}>
+              <p className="text-sm text-muted-foreground">위패와 최소 1개는 선택해야 합니다.</p>
+              <SingleProductSection
+                products={products}
+                type="urn"
+                selectedId={urnId}
+                onSelect={(p) => setUrnId(p?.id ?? null)}
+              />
+            </CollapsibleSection>
+
+            <CollapsibleSection title="위패" summary={tabletProduct ? tabletProduct.name : '미선택'}>
+              <p className="text-sm text-muted-foreground">유골함과 최소 1개는 선택해야 합니다.</p>
+              <SingleProductSection
+                products={products}
+                type="tablet"
+                selectedId={tabletId}
+                onSelect={(p) => {
+                  setTabletId(p?.id ?? null)
+                  if (!p) setTabletPhotoFile(null)
                 }}
-                className="text-sm text-muted-foreground underline"
-              >
-                위패 선택 취소
-              </button>
-            )}
-            {tabletProduct && (
-              <div>
-                <label className="block text-base font-medium text-muted-foreground">
-                  고인 사진 (선택, 위패 각인 미리보기용)
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setTabletPhotoFile(e.target.files?.[0] ?? null)}
-                  className="mt-1.5 w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-accent-foreground"
-                />
-                {tabletPhotoFile && (
-                  <button
-                    type="button"
-                    onClick={() => setTabletPhotoFile(null)}
-                    className="mt-1.5 text-sm text-muted-foreground underline"
-                  >
-                    사진 제거
-                  </button>
-                )}
-              </div>
-            )}
+              />
+              {tabletProduct && (
+                <div>
+                  <label className="block text-base font-medium text-muted-foreground">
+                    고인 사진 (선택, 위패 각인 미리보기용)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setTabletPhotoFile(e.target.files?.[0] ?? null)}
+                    className="mt-1.5 w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-accent-foreground"
+                  />
+                  {tabletPhotoFile && (
+                    <button
+                      type="button"
+                      onClick={() => setTabletPhotoFile(null)}
+                      className="mt-1.5 text-sm text-muted-foreground underline"
+                    >
+                      사진 제거
+                    </button>
+                  )}
+                </div>
+              )}
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title="기타 (추가 상품)"
+              summary={extraItems.length > 0 ? `${extraItems.length}개 · ${extraItemsTotal.toLocaleString()}원` : '없음'}
+            >
+              <ExtraItemsList
+                items={extraItems}
+                onChangeQuantity={changeExtraItemQuantity}
+                onRemove={removeExtraItem}
+              />
+              <ProductSearchGrid products={products} fixedType="other" onSelect={addExtraItem} />
+            </CollapsibleSection>
           </section>
 
           <section className="space-y-4 border-t border-border pt-6">

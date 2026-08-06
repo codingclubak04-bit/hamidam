@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { MoonMark } from '../components/MoonMark'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { PageHeader } from '../components/PageHeader'
 import type { Product, ProductType } from '../lib/types'
 
 const typeLabel: Record<ProductType, string> = {
@@ -38,17 +37,9 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_100%_at_75%_0%,_var(--color-background-alt)_0%,_var(--color-background)_60%)] px-4 py-10">
-      <ThemeToggle />
+      <PageHeader />
       <div className="mx-auto max-w-2xl">
-        <div className="mb-6 flex items-center gap-3">
-          <MoonMark className="h-9 w-9" />
-          <div>
-            <Link to="/products" className="text-base text-muted-foreground hover:text-accent hover:underline">
-              ← 상품 목록으로
-            </Link>
-            <h1 className="font-serif-kr text-2xl font-bold text-foreground">상품 상세</h1>
-          </div>
-        </div>
+        <h1 className="mb-6 font-serif-kr text-2xl font-bold text-foreground">상품 상세</h1>
 
         {loading && <p className="text-base text-muted-foreground">불러오는 중...</p>}
         {error && <p className="text-base text-destructive">{error}</p>}
@@ -91,14 +82,16 @@ export default function ProductDetail() {
               </div>
             </dl>
 
-            {(product.type === 'urn' || product.type === 'tablet') && (
-              <Link
-                to={`/orders/new?${product.type}=${product.id}`}
-                className="mt-6 block rounded-lg bg-accent px-4 py-3 text-center text-base font-semibold text-accent-foreground hover:opacity-90"
-              >
-                이 상품으로 주문서 작성
-              </Link>
-            )}
+            <Link
+              to={
+                product.type === 'urn' || product.type === 'tablet'
+                  ? `/orders/new?${product.type}=${product.id}`
+                  : `/orders/new?item=${product.id}`
+              }
+              className="mt-6 block rounded-lg bg-accent px-4 py-3 text-center text-base font-semibold text-accent-foreground hover:opacity-90"
+            >
+              이 상품으로 주문서 작성
+            </Link>
           </section>
         )}
       </div>
