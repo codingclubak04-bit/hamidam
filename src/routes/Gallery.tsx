@@ -65,9 +65,13 @@ export default function Gallery() {
           >
             남겨진 것은 유골이 아닙니다.
             <br />
-            한 사람의 삶, 사랑, 그리고 가족의 추억입니다.
+            한 사람의 삶, 사랑, 그리고
             <br />
-            하미담은 단순한 보관이 아닌, 그 소중한 가치를 보존합니다.
+            가족의 추억입니다.
+            <br />
+            하미담은 단순한 보관이 아닌,
+            <br />
+            그 소중한 가치를 보존합니다.
           </p>
         </div>
 
@@ -92,17 +96,19 @@ export default function Gallery() {
             <Link
               key={p.id}
               to={`/products/${p.id}`}
-              className="block overflow-hidden rounded-2xl border border-border bg-white opacity-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.35)] transition-transform duration-200 hover:-translate-y-1 animate-[hamidam-fade-up_0.8s_ease-out_forwards]"
-              style={{ animationDelay: `${0.6 + Math.min(i, 12) * 0.06}s` }}
+              className="block overflow-hidden rounded-2xl border border-border bg-white opacity-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.35)] transition-transform duration-200 hover:-translate-y-1 animate-[hamidam-fade-up_0.6s_ease-out_forwards]"
+              style={{ animationDelay: `${0.3 + Math.min(i, 8) * 0.025}s` }}
             >
               <div className="aspect-square bg-white p-3">
                 <img
                   src={p.image_url ?? undefined}
                   alt={p.name}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-contain blur-[0.8px]"
                 />
               </div>
-              <p className="px-3 pb-4 text-center text-base font-medium text-neutral-800">{p.name}</p>
+              <p className="line-clamp-2 px-3 pb-4 text-center text-sm font-medium text-neutral-800 sm:text-base">{p.name}</p>
             </Link>
           ))}
         </div>
