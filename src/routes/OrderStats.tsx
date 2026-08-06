@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 import type { OrderStatus } from '../lib/types'
 
 const statusLabel: Record<OrderStatus, string> = {
@@ -160,6 +161,8 @@ const sortableColumns: { key: SortKey; label: string }[] = [
 
 export default function OrderStats() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
+  const canDelete = profile?.role === 'super_admin'
   const [orders, setOrders] = useState<StatsOrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -169,6 +172,8 @@ export default function OrderStats() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [fullscreen, setFullscreen] = useState(false)
   const [mainTab, setMainTab] = useState<'stats' | 'orders'>('stats')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!fullscreen) return
@@ -327,6 +332,23 @@ export default function OrderStats() {
     }
   }
 
+  const deleteOrder = async (o: StatsOrderRow, e: MouseEvent) => {
+    e.stopPropagation()
+    const name = o.deceased_name || o.customer_name
+    if (!window.confirm(`"${name}" 주문을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return
+
+    setDeletingId(o.id)
+    setDeleteError(null)
+    const { error: deleteError } = await supabase.from('orders').delete().eq('id', o.id)
+    setDeletingId(null)
+
+    if (deleteError) {
+      setDeleteError('삭제 실패: ' + deleteError.message)
+      return
+    }
+    setOrders((prev) => prev.filter((row) => row.id !== o.id))
+  }
+
   const mainTabClass = (active: boolean) =>
     '-mb-px shrink-0 border-b-2 px-4 py-2.5 text-base font-semibold transition-colors ' +
     (active ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground')
@@ -358,6 +380,7 @@ export default function OrderStats() {
                 </th>
               ))}
               <th className="whitespace-nowrap px-3 py-2.5 font-medium">상품</th>
+              {canDelete && <th className="whitespace-nowrap px-3 py-2.5 font-medium">액션</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -381,6 +404,18 @@ export default function OrderStats() {
                   </span>
                 </td>
                 <td className="px-3 py-3 text-sm text-muted-foreground">{productNames(o)}</td>
+                {canDelete && (
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <button
+                      type="button"
+                      onClick={(e) => deleteOrder(o, e)}
+                      disabled={deletingId === o.id}
+                      className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -513,6 +548,7 @@ export default function OrderStats() {
               </button>
             </div>
           </div>
+          {deleteError && <p className="mt-2 text-sm text-destructive">{deleteError}</p>}
           {renderOrdersTable()}
         </div>
       )}
@@ -534,7 +570,10 @@ export default function OrderStats() {
                 닫기 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-6">{renderOrdersTable()}</div>
+            <div className="flex-1 overflow-auto p-6">
+              {deleteError && <p className="mb-2 text-sm text-destructive">{deleteError}</p>}
+              {renderOrdersTable()}
+            </div>
           </div>
         </div>
       )}

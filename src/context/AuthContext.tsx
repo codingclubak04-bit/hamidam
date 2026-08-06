@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { unsubscribeFromPush } from '../lib/push'
 import type { Profile } from '../lib/types'
 
 interface AuthContextValue {
@@ -67,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    if (profile) await unsubscribeFromPush(profile.id)
     await supabase.auth.signOut()
   }
 
