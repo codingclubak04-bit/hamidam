@@ -168,6 +168,7 @@ export default function OrderStats() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [fullscreen, setFullscreen] = useState(false)
+  const [mainTab, setMainTab] = useState<'stats' | 'orders'>('stats')
 
   useEffect(() => {
     if (!fullscreen) return
@@ -326,6 +327,10 @@ export default function OrderStats() {
     }
   }
 
+  const mainTabClass = (active: boolean) =>
+    '-mb-px shrink-0 border-b-2 px-4 py-2.5 text-base font-semibold transition-colors ' +
+    (active ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground')
+
   if (loading) {
     return <p className="text-base text-muted-foreground">불러오는 중...</p>
   }
@@ -419,83 +424,98 @@ export default function OrderStats() {
         ))}
       </div>
 
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-bold text-foreground">
-            핵심 지표 ({periodLabel[period]}
-            {source !== 'all' ? ` · ${sourceLabel[source]}` : ''})
-          </h2>
-          {previousPeriodLabel[period] && (
-            <span className="text-sm text-muted-foreground">{previousPeriodLabel[period]} 대비</span>
-          )}
-        </div>
-        <div className="mt-3 @container">
-          <div className="grid grid-cols-2 gap-3 @sm:grid-cols-3 @4xl:grid-cols-5">
-            <div className="col-span-2 rounded-2xl border border-accent/40 bg-surface/80 p-5 text-center backdrop-blur @sm:col-span-1">
-              <span className="inline-block rounded-full bg-accent/15 px-2.5 py-1 text-sm font-medium text-accent">
-                매출
-              </span>
-              <p className="mt-2 text-xl font-bold text-foreground">{formatWon(revenue)}</p>
-              <TrendBadge trend={trendPercent(revenue, previousRevenue)} />
+      <div className="flex gap-2 overflow-x-auto overflow-y-hidden border-b border-border">
+        <button type="button" onClick={() => setMainTab('stats')} className={mainTabClass(mainTab === 'stats')}>
+          통계 화면
+        </button>
+        <button type="button" onClick={() => setMainTab('orders')} className={mainTabClass(mainTab === 'orders')}>
+          주문 목록 ({sortedOrders.length})
+        </button>
+      </div>
+
+      {mainTab === 'stats' && (
+        <>
+          <div>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-bold text-foreground">
+                핵심 지표 ({periodLabel[period]}
+                {source !== 'all' ? ` · ${sourceLabel[source]}` : ''})
+              </h2>
+              {previousPeriodLabel[period] && (
+                <span className="text-sm text-muted-foreground">{previousPeriodLabel[period]} 대비</span>
+              )}
             </div>
-            {(Object.keys(statusLabel) as OrderStatus[]).map((s) => (
-              <div key={s} className="rounded-2xl border border-border bg-surface/80 p-5 text-center backdrop-blur">
-                <span className={`inline-block rounded-full px-2.5 py-1 text-sm font-medium ${statusBadgeClass[s]}`}>
-                  {statusLabel[s]}
-                </span>
-                <p className="mt-2 text-2xl font-bold text-foreground">{statusCounts[s]}건</p>
-                <TrendBadge trend={trendCount(statusCounts[s], previousStatusCounts?.[s] ?? null)} />
+            <div className="mt-3 @container">
+              <div className="grid grid-cols-2 gap-3 @sm:grid-cols-3 @4xl:grid-cols-5">
+                <div className="col-span-2 rounded-2xl border border-accent/40 bg-surface/80 p-5 text-center backdrop-blur @sm:col-span-1">
+                  <span className="inline-block rounded-full bg-accent/15 px-2.5 py-1 text-sm font-medium text-accent">
+                    매출
+                  </span>
+                  <p className="mt-2 text-xl font-bold text-foreground">{formatWon(revenue)}</p>
+                  <TrendBadge trend={trendPercent(revenue, previousRevenue)} />
+                </div>
+                {(Object.keys(statusLabel) as OrderStatus[]).map((s) => (
+                  <div key={s} className="rounded-2xl border border-border bg-surface/80 p-5 text-center backdrop-blur">
+                    <span className={`inline-block rounded-full px-2.5 py-1 text-sm font-medium ${statusBadgeClass[s]}`}>
+                      {statusLabel[s]}
+                    </span>
+                    <p className="mt-2 text-2xl font-bold text-foreground">{statusCounts[s]}건</p>
+                    <TrendBadge trend={trendCount(statusCounts[s], previousStatusCounts?.[s] ?? null)} />
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">취소 건은 매출 집계에서 제외됩니다.</p>
           </div>
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">취소 건은 매출 집계에서 제외됩니다.</p>
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <StatTable title="조직별 판매 현황" rows={byOrganization} emptyText="주문 데이터가 없습니다." />
-        <StatTable
-          title={source === 'partner' ? '파트너사 담당자별 판매 실적' : '팀장별 판매 실적'}
-          rows={bySalesRep}
-          emptyText="주문 데이터가 없습니다."
-        />
-      </div>
-
-      <div className="rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur">
-        <h2 className="text-lg font-bold text-foreground">상품별 판매 순위 Top 5</h2>
-        {topProducts.length === 0 ? (
-          <p className="mt-3 text-base text-muted-foreground">주문 데이터가 없습니다.</p>
-        ) : (
-          <ol className="mt-3 divide-y divide-border">
-            {topProducts.map((p, i) => (
-              <li key={p.name} className="flex items-center justify-between py-2.5 text-base">
-                <span className="text-foreground">
-                  <span className="mr-2 text-muted-foreground">{i + 1}.</span>
-                  {p.name}
-                </span>
-                <span className="font-semibold text-accent">{p.count}건</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      <div className="rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-bold text-foreground">전체 주문 내역</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">총 {sortedOrders.length}건</span>
-            <button
-              type="button"
-              onClick={() => setFullscreen(true)}
-              className="rounded-full border border-border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-accent hover:text-accent"
-            >
-              전체화면
-            </button>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <StatTable title="조직별 판매 현황" rows={byOrganization} emptyText="주문 데이터가 없습니다." />
+            <StatTable
+              title={source === 'partner' ? '파트너사 담당자별 판매 실적' : '팀장별 판매 실적'}
+              rows={bySalesRep}
+              emptyText="주문 데이터가 없습니다."
+            />
           </div>
+
+          <div className="rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur">
+            <h2 className="text-lg font-bold text-foreground">상품별 판매 순위 Top 5</h2>
+            {topProducts.length === 0 ? (
+              <p className="mt-3 text-base text-muted-foreground">주문 데이터가 없습니다.</p>
+            ) : (
+              <ol className="mt-3 divide-y divide-border">
+                {topProducts.map((p, i) => (
+                  <li key={p.name} className="flex items-center justify-between py-2.5 text-base">
+                    <span className="text-foreground">
+                      <span className="mr-2 text-muted-foreground">{i + 1}.</span>
+                      {p.name}
+                    </span>
+                    <span className="font-semibold text-accent">{p.count}건</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </>
+      )}
+
+      {mainTab === 'orders' && (
+        <div className="rounded-2xl border border-border bg-surface/80 p-6 backdrop-blur">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-lg font-bold text-foreground">전체 주문 내역</h2>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">총 {sortedOrders.length}건</span>
+              <button
+                type="button"
+                onClick={() => setFullscreen(true)}
+                className="rounded-full border border-border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-accent hover:text-accent"
+              >
+                전체화면
+              </button>
+            </div>
+          </div>
+          {renderOrdersTable()}
         </div>
-        {renderOrdersTable()}
-      </div>
+      )}
 
       {fullscreen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background/95 p-4 backdrop-blur-sm sm:p-8">

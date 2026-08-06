@@ -33,6 +33,7 @@ export default function AdminSalesReps() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingRep, setEditingRep] = useState<SalesRepRow | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', phone: '', organizationId: '' })
+  const [editEmail, setEditEmail] = useState<string | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
 
@@ -65,9 +66,20 @@ export default function AdminSalesReps() {
     setEditingRep(rep)
     setEditForm({ name: rep.name, phone: rep.phone ?? '', organizationId: rep.organization_id ?? '' })
     setEditError(null)
+    setEditEmail(null)
+    supabase.rpc('admin_get_user_email', { target_id: rep.id }).then(({ data, error: rpcError }) => {
+      if (rpcError) {
+        console.error('이메일 조회 실패:', rpcError.message)
+        return
+      }
+      setEditEmail(data ?? '알 수 없음')
+    })
   }
 
-  const closeEdit = () => setEditingRep(null)
+  const closeEdit = () => {
+    setEditingRep(null)
+    setEditEmail(null)
+  }
 
   const updateEditForm = (key: keyof EditFormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setEditForm((f) => ({ ...f, [key]: e.target.value }))
@@ -231,6 +243,12 @@ export default function AdminSalesReps() {
 
       <Modal open={editingRep !== null} onClose={closeEdit} title="팀장 정보 수정">
         <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-base font-medium text-muted-foreground">가입 이메일(로그인 아이디)</label>
+            <p className="mt-1.5 rounded-lg border border-border bg-input/50 px-4 py-3 text-base text-foreground">
+              {editEmail ?? '불러오는 중...'}
+            </p>
+          </div>
           <Field label="성함" value={editForm.name} onChange={updateEditForm('name')} />
           <Field label="연락처" value={editForm.phone} onChange={updateEditForm('phone')} />
           <Select label="소속 회사" value={editForm.organizationId} onChange={updateEditForm('organizationId')}>

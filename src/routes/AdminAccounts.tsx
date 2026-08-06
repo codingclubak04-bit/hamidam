@@ -58,6 +58,7 @@ export default function AdminAccounts() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingAdmin, setEditingAdmin] = useState<AdminRow | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', phone: '', role: 'super_admin', organizationId: '' })
+  const [editEmail, setEditEmail] = useState<string | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
   const [mainTab, setMainTab] = useState<'register' | 'list'>('list')
@@ -189,9 +190,20 @@ export default function AdminAccounts() {
       organizationId: row.organization_id ?? '',
     })
     setEditError(null)
+    setEditEmail(null)
+    supabase.rpc('admin_get_user_email', { target_id: row.id }).then(({ data, error: rpcError }) => {
+      if (rpcError) {
+        console.error('이메일 조회 실패:', rpcError.message)
+        return
+      }
+      setEditEmail(data ?? '알 수 없음')
+    })
   }
 
-  const closeEdit = () => setEditingAdmin(null)
+  const closeEdit = () => {
+    setEditingAdmin(null)
+    setEditEmail(null)
+  }
 
   const updateEditForm = (key: keyof EditFormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setEditForm((f) => ({ ...f, [key]: e.target.value }))
@@ -437,6 +449,12 @@ export default function AdminAccounts() {
 
       <Modal open={editingAdmin !== null} onClose={closeEdit} title="관리자 정보 수정">
         <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-base font-medium text-muted-foreground">가입 이메일(로그인 아이디)</label>
+            <p className="mt-1.5 rounded-lg border border-border bg-input/50 px-4 py-3 text-base text-foreground">
+              {editEmail ?? '불러오는 중...'}
+            </p>
+          </div>
           <Field label="성함" value={editForm.name} onChange={updateEditForm('name')} />
           <Field label="연락처" value={editForm.phone} onChange={updateEditForm('phone')} />
           <Select label="역할" value={editForm.role} onChange={updateEditForm('role')}>

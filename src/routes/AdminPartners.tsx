@@ -53,6 +53,7 @@ export default function AdminPartners() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', businessRegNo: '', contactPhone: '' })
+  const [editEmail, setEditEmail] = useState<string | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
   const [mainTab, setMainTab] = useState<'register' | 'list'>('list')
@@ -144,9 +145,32 @@ export default function AdminPartners() {
       contactPhone: org.contact_phone ?? '',
     })
     setEditError(null)
+    setEditEmail(null)
+    supabase
+      .from('profiles')
+      .select('id')
+      .eq('organization_id', org.id)
+      .eq('role', 'org_admin')
+      .limit(1)
+      .then(({ data, error: profileError }) => {
+        if (profileError || !data || data.length === 0) {
+          setEditEmail('담당자 계정 없음')
+          return
+        }
+        supabase.rpc('admin_get_user_email', { target_id: data[0].id }).then(({ data: email, error: rpcError }) => {
+          if (rpcError) {
+            console.error('이메일 조회 실패:', rpcError.message)
+            return
+          }
+          setEditEmail(email ?? '알 수 없음')
+        })
+      })
   }
 
-  const closeEdit = () => setEditingOrg(null)
+  const closeEdit = () => {
+    setEditingOrg(null)
+    setEditEmail(null)
+  }
 
   const updateEditForm = (key: keyof EditFormState) => (e: ChangeEvent<HTMLInputElement>) =>
     setEditForm((f) => ({ ...f, [key]: e.target.value }))
@@ -420,6 +444,12 @@ export default function AdminPartners() {
 
       <Modal open={editingOrg !== null} onClose={closeEdit} title="파트너사 정보 수정">
         <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-base font-medium text-muted-foreground">담당자 가입 이메일(로그인 아이디)</label>
+            <p className="mt-1.5 rounded-lg border border-border bg-input/50 px-4 py-3 text-base text-foreground">
+              {editEmail ?? '불러오는 중...'}
+            </p>
+          </div>
           <Field label="장례회사명" value={editForm.name} onChange={updateEditForm('name')} />
           <Field label="사업자등록번호" value={editForm.businessRegNo} onChange={updateEditForm('businessRegNo')} />
           <Field label="대표 연락처" value={editForm.contactPhone} onChange={updateEditForm('contactPhone')} />
