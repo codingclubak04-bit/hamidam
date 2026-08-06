@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { AdminShell } from '../components/AdminShell'
@@ -60,6 +60,9 @@ export default function AdminAccounts() {
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', phone: '', role: 'super_admin', organizationId: '' })
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
+  const [mainTab, setMainTab] = useState<'register' | 'list'>('list')
+  const [roleTab, setRoleTab] = useState<'all' | 'super_admin' | 'org_admin'>('all')
+  const [search, setSearch] = useState('')
 
   const loadAdmins = async () => {
     const { data, error: loadError } = await supabase
@@ -86,6 +89,28 @@ export default function AdminAccounts() {
       setOrgs(data ?? [])
     })
   }, [])
+
+  const roleCounts = useMemo(
+    () => ({
+      all: admins.length,
+      super_admin: admins.filter((row) => row.role === 'super_admin').length,
+      org_admin: admins.filter((row) => row.role === 'org_admin').length,
+    }),
+    [admins],
+  )
+
+  const filteredAdmins = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return admins.filter((row) => {
+      if (roleTab !== 'all' && row.role !== roleTab) return false
+      if (!q) return true
+      return (
+        row.name.toLowerCase().includes(q) ||
+        (row.phone ?? '').toLowerCase().includes(q) ||
+        (row.organizations?.name ?? '').toLowerCase().includes(q)
+      )
+    })
+  }, [admins, roleTab, search])
 
   const update = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -211,109 +236,104 @@ export default function AdminAccounts() {
       ? 'bg-linear-to-r from-accent-light to-accent text-accent-foreground hover:brightness-105'
       : 'border border-border text-muted-foreground hover:border-destructive hover:text-destructive')
 
+  const mainTabClass = (active: boolean) =>
+    '-mb-px shrink-0 border-b-2 px-4 py-2.5 text-base font-semibold transition-colors ' +
+    (active ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground')
+
+  const roleTabClass = (active: boolean) =>
+    'shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ' +
+    (active
+      ? 'bg-accent/15 text-accent'
+      : 'border border-border text-muted-foreground hover:border-accent hover:text-accent')
+
+  const emptyMessage = admins.length === 0 ? '등록된 관리자가 없습니다.' : '검색 결과가 없습니다.'
+
   return (
     <AdminShell title="관리자 계정 관리">
-      <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
-        <h2 className="font-serif-kr text-xl font-bold text-foreground">신규 관리자 등록</h2>
-        <p className="mt-1 text-base text-muted-foreground">
-          슈퍼관리자 또는 특정 파트너사의 조직관리자 계정을 새로 발급합니다.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <Field label="성함" value={form.name} onChange={update('name')} />
-          <Field label="연락처" value={form.phone} onChange={update('phone')} />
-          <Field label="이메일(로그인 아이디)" type="email" value={form.email} onChange={update('email')} />
-          <Field label="임시 비밀번호" type="password" value={form.password} onChange={update('password')} />
-          <Select label="역할" value={form.role} onChange={update('role')}>
-            <option value="super_admin">슈퍼관리자</option>
-            <option value="org_admin">조직관리자</option>
-          </Select>
-          {form.role === 'org_admin' && (
-            <Select label="소속 회사" value={form.organizationId} onChange={update('organizationId')}>
-              <option value="">선택해주세요</option>
-              {orgs.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
+      <div className="flex gap-2 overflow-x-auto overflow-y-hidden border-b border-border">
+        <button type="button" onClick={() => setMainTab('register')} className={mainTabClass(mainTab === 'register')}>
+          관리자 등록
+        </button>
+        <button type="button" onClick={() => setMainTab('list')} className={mainTabClass(mainTab === 'list')}>
+          목록 보기 ({admins.length})
+        </button>
+      </div>
+
+      {mainTab === 'register' && (
+        <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
+          <h2 className="font-serif-kr text-xl font-bold text-foreground">신규 관리자 등록</h2>
+          <p className="mt-1 text-base text-muted-foreground">
+            슈퍼관리자 또는 특정 파트너사의 조직관리자 계정을 새로 발급합니다.
+          </p>
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <Field label="성함" value={form.name} onChange={update('name')} />
+            <Field label="연락처" value={form.phone} onChange={update('phone')} />
+            <Field label="이메일(로그인 아이디)" type="email" value={form.email} onChange={update('email')} />
+            <Field label="임시 비밀번호" type="password" value={form.password} onChange={update('password')} />
+            <Select label="역할" value={form.role} onChange={update('role')}>
+              <option value="super_admin">슈퍼관리자</option>
+              <option value="org_admin">조직관리자</option>
             </Select>
-          )}
-          {error && <p className="text-base text-destructive">{error}</p>}
-          {success && <p className="text-base text-accent">{success}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
-          >
-            {loading ? '등록 중...' : '관리자 등록'}
-          </button>
-        </form>
-      </section>
+            {form.role === 'org_admin' && (
+              <Select label="소속 회사" value={form.organizationId} onChange={update('organizationId')}>
+                <option value="">선택해주세요</option>
+                {orgs.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+            {error && <p className="text-base text-destructive">{error}</p>}
+            {success && <p className="text-base text-accent">{success}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-linear-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+            >
+              {loading ? '등록 중...' : '관리자 등록'}
+            </button>
+          </form>
+        </section>
+      )}
 
-      <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
-        <h2 className="font-serif-kr text-xl font-bold text-foreground">전체 관리자 ({admins.length})</h2>
-        <ul className="mt-4 divide-y divide-border md:hidden">
-          {admins.map((row) => (
-            <li key={row.id} className="flex flex-col gap-3 py-3">
-              <div>
-                <p className="text-base font-semibold text-foreground">
-                  {row.name}
-                  <span className="ml-2 rounded-full bg-accent/15 px-2.5 py-0.5 text-sm font-medium text-accent">
-                    {roleLabel[row.role]}
-                  </span>
-                  {row.status === 'disabled' && (
-                    <span className="ml-2 rounded-full bg-destructive/15 px-2.5 py-0.5 text-sm font-medium text-destructive">
-                      비활성화됨
-                    </span>
-                  )}
-                </p>
-                <p className="text-base text-muted-foreground">
-                  {row.phone || '연락처 미입력'} · {row.organizations?.name ?? '소속 없음'}
-                </p>
-              </div>
-              {row.id !== profile?.id && (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
-                    {row.status === 'disabled' ? '활성화' : '비활성화'}
-                  </button>
-                  <button
-                    onClick={() => openEdit(row)}
-                    className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => deleteAdmin(row)}
-                    disabled={deletingId === row.id}
-                    className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
-                  >
-                    삭제
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-          {admins.length === 0 && <li className="py-3 text-base text-muted-foreground">등록된 관리자가 없습니다.</li>}
-        </ul>
+      {mainTab === 'list' && (
+        <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setRoleTab('all')} className={roleTabClass(roleTab === 'all')}>
+              전체 ({roleCounts.all})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleTab('super_admin')}
+              className={roleTabClass(roleTab === 'super_admin')}
+            >
+              슈퍼관리자 ({roleCounts.super_admin})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleTab('org_admin')}
+              className={roleTabClass(roleTab === 'org_admin')}
+            >
+              조직관리자 ({roleCounts.org_admin})
+            </button>
+          </div>
 
-        <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border md:block">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
-                <th className="px-4 py-3 font-medium">이름</th>
-                <th className="px-4 py-3 font-medium">연락처</th>
-                <th className="px-4 py-3 font-medium">소속</th>
-                <th className="px-4 py-3 font-medium">역할</th>
-                <th className="px-4 py-3 font-medium text-right">액션</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {admins.map((row) => (
-                <tr key={row.id}>
-                  <td className="px-4 py-3 text-base font-semibold text-foreground">{row.name}</td>
-                  <td className="px-4 py-3 text-base text-muted-foreground">{row.phone || '연락처 미입력'}</td>
-                  <td className="px-4 py-3 text-base text-muted-foreground">{row.organizations?.name ?? '소속 없음'}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-sm font-medium text-accent">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="이름, 연락처, 소속 회사 검색"
+            className="mt-4 w-full rounded-lg border border-border bg-input px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+
+          <ul className="mt-4 divide-y divide-border md:hidden">
+            {filteredAdmins.map((row) => (
+              <li key={row.id} className="flex flex-col gap-3 py-3">
+                <div>
+                  <p className="text-base font-semibold text-foreground">
+                    {row.name}
+                    <span className="ml-2 rounded-full bg-accent/15 px-2.5 py-0.5 text-sm font-medium text-accent">
                       {roleLabel[row.role]}
                     </span>
                     {row.status === 'disabled' && (
@@ -321,42 +341,99 @@ export default function AdminAccounts() {
                         비활성화됨
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {row.id !== profile?.id && (
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
-                          {row.status === 'disabled' ? '활성화' : '비활성화'}
-                        </button>
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
-                        >
-                          수정
-                        </button>
-                        <button
-                          onClick={() => deleteAdmin(row)}
-                          disabled={deletingId === row.id}
-                          className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                  </p>
+                  <p className="text-base text-muted-foreground">
+                    {row.phone || '연락처 미입력'} · {row.organizations?.name ?? '소속 없음'}
+                  </p>
+                </div>
+                {row.id !== profile?.id && (
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
+                      {row.status === 'disabled' ? '활성화' : '비활성화'}
+                    </button>
+                    <button
+                      onClick={() => openEdit(row)}
+                      className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => deleteAdmin(row)}
+                      disabled={deletingId === row.id}
+                      className="rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+            {filteredAdmins.length === 0 && <li className="py-3 text-base text-muted-foreground">{emptyMessage}</li>}
+          </ul>
+
+          <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border md:block">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border bg-input/40 text-sm text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">이름</th>
+                  <th className="px-4 py-3 font-medium">연락처</th>
+                  <th className="px-4 py-3 font-medium">소속</th>
+                  <th className="px-4 py-3 font-medium">역할</th>
+                  <th className="px-4 py-3 font-medium text-right">액션</th>
                 </tr>
-              ))}
-              {admins.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-3 text-base text-muted-foreground">
-                    등록된 관리자가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredAdmins.map((row) => (
+                  <tr key={row.id}>
+                    <td className="px-4 py-3 text-base font-semibold text-foreground">{row.name}</td>
+                    <td className="px-4 py-3 text-base text-muted-foreground">{row.phone || '연락처 미입력'}</td>
+                    <td className="px-4 py-3 text-base text-muted-foreground">{row.organizations?.name ?? '소속 없음'}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-sm font-medium text-accent">
+                        {roleLabel[row.role]}
+                      </span>
+                      {row.status === 'disabled' && (
+                        <span className="ml-2 rounded-full bg-destructive/15 px-2.5 py-0.5 text-sm font-medium text-destructive">
+                          비활성화됨
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {row.id !== profile?.id && (
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => toggleStatus(row)} disabled={updatingId === row.id} className={toggleButtonClass(row)}>
+                            {row.status === 'disabled' ? '활성화' : '비활성화'}
+                          </button>
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-accent hover:text-accent"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => deleteAdmin(row)}
+                            disabled={deletingId === row.id}
+                            className="shrink-0 rounded-lg border border-border px-4 py-2 text-base font-semibold text-muted-foreground hover:border-destructive hover:text-destructive disabled:opacity-50"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filteredAdmins.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-3 text-base text-muted-foreground">
+                      {emptyMessage}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <Modal open={editingAdmin !== null} onClose={closeEdit} title="관리자 정보 수정">
         <form onSubmit={handleEditSubmit} className="space-y-4">

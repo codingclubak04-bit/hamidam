@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { AdminShell } from '../components/AdminShell'
 import { Field } from '../components/Field'
@@ -55,6 +55,9 @@ export default function AdminPartners() {
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', businessRegNo: '', contactPhone: '' })
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
+  const [mainTab, setMainTab] = useState<'register' | 'list'>('list')
+  const [statusTab, setStatusTab] = useState<'all' | Organization['status']>('all')
+  const [search, setSearch] = useState('')
 
   const loadOrgs = async () => {
     const { data, error: loadError } = await supabase
@@ -106,6 +109,29 @@ export default function AdminPartners() {
     }
     loadOrgs()
   }
+
+  const statusCounts = useMemo(
+    () => ({
+      all: orgs.length,
+      pending: orgs.filter((org) => org.status === 'pending').length,
+      approved: orgs.filter((org) => org.status === 'approved').length,
+      rejected: orgs.filter((org) => org.status === 'rejected').length,
+    }),
+    [orgs],
+  )
+
+  const filteredOrgs = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return orgs.filter((org) => {
+      if (statusTab !== 'all' && org.status !== statusTab) return false
+      if (!q) return true
+      return (
+        org.name.toLowerCase().includes(q) ||
+        (org.business_reg_no ?? '').toLowerCase().includes(q) ||
+        (org.contact_phone ?? '').toLowerCase().includes(q)
+      )
+    })
+  }, [orgs, statusTab, search])
 
   const update = (key: keyof FormState) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -180,38 +206,96 @@ export default function AdminPartners() {
     loadOrgs()
   }
 
+  const emptyMessage = orgs.length === 0 ? '등록된 파트너사가 없습니다.' : '검색 결과가 없습니다.'
+
+  const mainTabClass = (active: boolean) =>
+    '-mb-px shrink-0 border-b-2 px-4 py-2.5 text-base font-semibold transition-colors ' +
+    (active ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground')
+
+  const statusTabClass = (active: boolean) =>
+    'shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ' +
+    (active
+      ? 'bg-accent/15 text-accent'
+      : 'border border-border text-muted-foreground hover:border-accent hover:text-accent')
+
   return (
     <AdminShell title="파트너사 관리">
-      <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
-        <h2 className="font-serif-kr text-xl font-bold text-foreground">신규 파트너사 등록</h2>
-        <p className="mt-1 text-base text-muted-foreground">
-          회사 정보와 담당자 로그인 정보를 함께 등록하면 즉시 사용 가능한 계정이 생성됩니다.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <Field label="장례회사명" value={form.orgName} onChange={update('orgName')} />
-          <Field label="사업자등록번호" value={form.businessRegNo} onChange={update('businessRegNo')} />
-          <Field label="대표 연락처" value={form.orgContactPhone} onChange={update('orgContactPhone')} />
-          <Field label="담당자 성함" value={form.adminName} onChange={update('adminName')} />
-          <Field label="담당자 연락처" value={form.adminPhone} onChange={update('adminPhone')} />
-          <Field label="담당자 이메일(로그인 아이디)" type="email" value={form.adminEmail} onChange={update('adminEmail')} />
-          <Field label="임시 비밀번호" type="password" value={form.adminPassword} onChange={update('adminPassword')} />
-          {error && <p className="text-base text-destructive">{error}</p>}
-          {success && <p className="text-base text-accent">{success}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
-          >
-            {loading ? '등록 중...' : '파트너사 등록'}
-          </button>
-        </form>
-      </section>
+      <div className="flex gap-2 overflow-x-auto overflow-y-hidden border-b border-border">
+        <button type="button" onClick={() => setMainTab('register')} className={mainTabClass(mainTab === 'register')}>
+          파트너사 등록
+        </button>
+        <button type="button" onClick={() => setMainTab('list')} className={mainTabClass(mainTab === 'list')}>
+          목록 보기 ({orgs.length})
+        </button>
+      </div>
 
-      <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
-        <h2 className="font-serif-kr text-xl font-bold text-foreground">등록된 파트너사 ({orgs.length})</h2>
-        {error && <p className="mt-2 text-base text-destructive">{error}</p>}
-        <ul className="mt-4 divide-y divide-border md:hidden">
-          {orgs.map((org) => (
+      {mainTab === 'register' && (
+        <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
+          <h2 className="font-serif-kr text-xl font-bold text-foreground">신규 파트너사 등록</h2>
+          <p className="mt-1 text-base text-muted-foreground">
+            회사 정보와 담당자 로그인 정보를 함께 등록하면 즉시 사용 가능한 계정이 생성됩니다.
+          </p>
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <Field label="장례회사명" value={form.orgName} onChange={update('orgName')} />
+            <Field label="사업자등록번호" value={form.businessRegNo} onChange={update('businessRegNo')} />
+            <Field label="대표 연락처" value={form.orgContactPhone} onChange={update('orgContactPhone')} />
+            <Field label="담당자 성함" value={form.adminName} onChange={update('adminName')} />
+            <Field label="담당자 연락처" value={form.adminPhone} onChange={update('adminPhone')} />
+            <Field label="담당자 이메일(로그인 아이디)" type="email" value={form.adminEmail} onChange={update('adminEmail')} />
+            <Field label="임시 비밀번호" type="password" value={form.adminPassword} onChange={update('adminPassword')} />
+            {error && <p className="text-base text-destructive">{error}</p>}
+            {success && <p className="text-base text-accent">{success}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-gradient-to-r from-accent-light to-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:brightness-105 disabled:opacity-50"
+            >
+              {loading ? '등록 중...' : '파트너사 등록'}
+            </button>
+          </form>
+        </section>
+      )}
+
+      {mainTab === 'list' && (
+        <section className="rounded-2xl border border-border bg-surface/80 p-7 shadow-[0_22px_50px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
+          {error && <p className="mb-4 text-base text-destructive">{error}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setStatusTab('all')} className={statusTabClass(statusTab === 'all')}>
+              전체 ({statusCounts.all})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('pending')}
+              className={statusTabClass(statusTab === 'pending')}
+            >
+              승인 대기 ({statusCounts.pending})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('approved')}
+              className={statusTabClass(statusTab === 'approved')}
+            >
+              승인됨 ({statusCounts.approved})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('rejected')}
+              className={statusTabClass(statusTab === 'rejected')}
+            >
+              거부됨 ({statusCounts.rejected})
+            </button>
+          </div>
+
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="장례회사명, 사업자등록번호, 연락처 검색"
+            className="mt-4 w-full rounded-lg border border-border bg-input px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+
+          <ul className="mt-4 divide-y divide-border md:hidden">
+          {filteredOrgs.map((org) => (
             <li key={org.id} className="py-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-base font-semibold text-foreground">
@@ -259,7 +343,7 @@ export default function AdminPartners() {
               </div>
             </li>
           ))}
-          {orgs.length === 0 && <li className="py-3 text-base text-muted-foreground">등록된 파트너사가 없습니다.</li>}
+          {filteredOrgs.length === 0 && <li className="py-3 text-base text-muted-foreground">{emptyMessage}</li>}
         </ul>
 
         <div className="mt-4 hidden overflow-x-auto rounded-xl border border-border md:block">
@@ -274,7 +358,7 @@ export default function AdminPartners() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {orgs.map((org) => (
+              {filteredOrgs.map((org) => (
                 <tr key={org.id}>
                   <td className="px-4 py-3 text-base font-semibold text-foreground">{org.name}</td>
                   <td className="px-4 py-3 text-base text-muted-foreground">{org.business_reg_no || '미입력'}</td>
@@ -321,10 +405,10 @@ export default function AdminPartners() {
                   </td>
                 </tr>
               ))}
-              {orgs.length === 0 && (
+              {filteredOrgs.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-3 text-base text-muted-foreground">
-                    등록된 파트너사가 없습니다.
+                    {emptyMessage}
                   </td>
                 </tr>
               )}
@@ -332,6 +416,7 @@ export default function AdminPartners() {
           </table>
         </div>
       </section>
+      )}
 
       <Modal open={editingOrg !== null} onClose={closeEdit} title="파트너사 정보 수정">
         <form onSubmit={handleEditSubmit} className="space-y-4">
